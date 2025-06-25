@@ -1,0 +1,12 @@
+fastapi
+uvicorn[standard]
+sqlmodel
+asyncpg
+opencv-python
+python-dotenv
+inference-sdk
+blinker
+psycopg2-binary
+websockets
+# mido
+music21

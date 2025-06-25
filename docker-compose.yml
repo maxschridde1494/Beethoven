@@ -1,0 +1,61 @@
+version: "3.9"
+
+services:
+  server:
+    build: 
+      context: .
+      target: server-dev
+    container_name: server
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - stream-proxy
+    environment:
+      - CAM_PROXY_CONFIG=${CAM_PROXY_CONFIG}
+      - ROBOFLOW_API_URL=${ROBOFLOW_API_URL}
+      - ROBOFLOW_API_KEY=${ROBOFLOW_API_KEY}
+      - ROBOFLOW_MODEL_ID=${ROBOFLOW_MODEL_ID}
+      - CONFIDENCE_THRESHOLD=${CONFIDENCE_THRESHOLD}
+      - INTERVAL=${INTERVAL}
+    volumes:
+      - ./server/app:/app
+      - ./server/snapshots:/app/snapshots
+  
+  stream-proxy:
+    image: bluenviron/mediamtx:latest
+    container_name: rtsp-proxy
+    restart: unless-stopped
+    ports:
+      - "8554:8554/tcp"
+      - "8554:8554/udp"
+      - "8888:8888"
+    volumes:
+      - ./server/mediamtx.yml:/mediamtx.yml:ro
+
+  client:
+    build: 
+      context: .
+      target: client-dev
+    container_name: client
+    ports:
+      - "5173:5173"
+      - "3036:3036"
+    volumes:
+      - ./client:/app:cached
+      - /app/node_modules # keep container's node_modules, don't let host override
+
+  db:
+    image: postgres:17
+    container_name: db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: beethoven
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:

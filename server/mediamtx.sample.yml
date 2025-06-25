@@ -1,0 +1,10 @@
+# mediamtx.yml
+paths:
+  office:
+    source: rtsp://username:password@192.168.1.100:554/stream1
+  living:
+    source: rtsp://username:password@192.168.1.101:554/stream1
+  kitchen:
+    source: rtsp://username:password@192.168.1.102:554/stream1
+  patio:
+    source: rtsp://username:password@192.168.1.103:554/stream1
