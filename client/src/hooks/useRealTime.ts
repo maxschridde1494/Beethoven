@@ -28,16 +28,16 @@ export const useRealTime = (url: string) => {
 
       if (message === RealTimeMessage.ConnectionMade) {
         const initData = data as WebsocketConnectionInit;
-        setLast10Detections(initData.last_10_detections);
-        setLast5Snapshots(initData.last_5_snapshots);
+        // setLast10Detections(initData.last_10_detections);
+        // setLast5Snapshots(initData.last_5_snapshots);
         setInitialPredictions(initData.initial_predictions);
-        setIsLoading(false);
+        // setIsLoading(false);
       } else if (message === RealTimeMessage.HighConfidenceDetectionMade) {
-        setHighConfidenceDetection(data as Detection);
+        // setHighConfidenceDetection(data as Detection);
       } else if (message === RealTimeMessage.DetectionMade) {
-        setLast10Detections(prev => [data as Detection, ...prev.slice(0, 9)]);
+        // setLast10Detections(prev => [data as Detection, ...prev.slice(0, 9)]);
       } else if (message === RealTimeMessage.SnapshotMade) {
-        setLast5Snapshots(prev => [(data as {asset_path: string}).asset_path, ...prev.slice(0, 4)]);
+        // setLast5Snapshots(prev => [(data as {asset_path: string}).asset_path, ...prev.slice(0, 4)]);
       }
     };
 

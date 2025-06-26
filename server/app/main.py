@@ -1,4 +1,4 @@
-import os, json
+import os, json, subprocess
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -22,6 +22,29 @@ from app.state import set_initial_predictions
 load_dotenv()
 
 logger = get_logger(__name__)
+
+def _start_ffmpeg_stream_to_mediamtx(camera_id: str, video_path: str):
+    """Starts a background ffmpeg process to stream a video file to MediaMTX."""
+    if not os.path.exists(video_path):
+        logger.error(f"Video file not found at {video_path}, cannot stream.")
+        return
+
+    rtsp_url = f"rtsp://rtsp-proxy:8554/{camera_id}"
+    command = [
+        "ffmpeg",
+        "-re",
+        "-stream_loop", "-1",
+        "-i", video_path,
+        "-c:v", "copy",     # Copy video without re-encoding
+        "-an",             # Disable audio
+        "-f", "rtsp",
+        "-rtsp_transport", "tcp",
+        rtsp_url,
+    ]
+    logger.info(f"Starting ffmpeg stream for {camera_id} from {video_path} to {rtsp_url}")
+    # Run ffmpeg in the background, ignoring its output
+    subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
 
 def run_initial_inference(camera_config: list):
     """Runs inference on a static image for each camera at startup."""
@@ -92,7 +115,12 @@ def start_streams(loop, camera_config: list):
 
     # Start streams and detectors
     for camera_id, url in camera_feeds.items():
-        # Start stream
+        # If the url is a local file path, start a separate ffmpeg process to stream it to mediamtx
+        is_local_file = not url.startswith("rtsp://")
+        if is_local_file:
+            _start_ffmpeg_stream_to_mediamtx(camera_id, url)
+
+        # Start stream (for analysis)
         stream = stream_manager.add_stream(camera_id, url)
         
         # Start detector for this stream

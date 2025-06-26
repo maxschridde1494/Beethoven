@@ -1,12 +1,22 @@
 # mediamtx.yml
 hls: yes
 hlsAddress: :8888
+
 paths:
-  edge-left:
-    source: rtsp://username:password@10.40.40.76:554/stream1
   middle-left:
-    source: rtsp://username:password@10.40.40.210:554/stream1
-  # middle-right:
-  #   source: rtsp://username:password@10.40.40.37:554/stream1
-  # edge-right:
-  #   source: rtsp://username:password@10.40.40.138:554/stream1
+    source: publisher       # wait for FFmpeg → rtsp://rtsp-proxy:8554/middle-left
+  edge-left:
+    source: publisher
+# hls: yes
+# hlsAddress: :8888
+# paths:
+#   edge-left:
+#     source: rtsp://mediamtx:8554/edge-left
+#     # source: rtsp://username:password@10.40.40.76:554/stream1
+#   middle-left:
+#     source: rtsp://mediamtx:8554/middle-left
+#     # source: rtsp://username:password@10.40.40.210:554/stream1
+#   # middle-right:
+#   #   source: rtsp://username:password@10.40.40.37:554/stream1
+#   # edge-right:
+#   #   source: rtsp://username:password@10.40.40.138:554/stream1
