@@ -8,6 +8,7 @@ from app.utils.logger import get_logger
 from app.models import Detection
 from app.db import get_session
 from app.utils.signals import high_confidence_detection_made, detection_made, snapshot_made, musical_events_created
+from app.state import get_initial_predictions
 
 logger = get_logger(__name__)
 
@@ -71,7 +72,8 @@ async def get_initial_data():
 
     return {
         "last_10_detections": detections_data,
-        "last_5_snapshots": snapshots
+        "last_5_snapshots": snapshots,
+        "initial_predictions": get_initial_predictions(),
     }
 
 @router.websocket("/ws")

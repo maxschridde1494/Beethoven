@@ -40,8 +40,8 @@ const LiveRtspPlayer: React.FC<LiveRtspPlayerProps> = ({ cameraId, hlsUrl, wsUrl
 
   return (
     <div style={{ position: 'relative', width: '100%', height: 'auto' }}>
-      <video ref={videoRef} controls autoPlay muted style={{ width: '100%', height: 'auto' }} />
-      <PredictionsOverlay cameraId={cameraId} wsUrl={wsUrl} />
+        <video ref={videoRef} controls autoPlay muted style={{ width: '100%', height: 'auto' }} />
+        <PredictionsOverlay cameraId={cameraId} wsUrl={wsUrl} />
     </div>
   );
 };

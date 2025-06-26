@@ -1,13 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-
-interface Prediction {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-    confidence: number;
-    class_name: string;
-}
+import type { Detection } from '../../types';
+import { getColorForClass } from '../../utils/colorUtils';
 
 interface PredictionsOverlayProps {
     cameraId: string;
@@ -16,7 +9,7 @@ interface PredictionsOverlayProps {
 
 const PredictionsOverlay: React.FC<PredictionsOverlayProps> = ({ cameraId, wsUrl }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const [predictions, setPredictions] = useState<Prediction[]>([]);
+    const [predictions, setPredictions] = useState<Detection[]>([]);
 
     useEffect(() => {
         const ws = new WebSocket(wsUrl);
@@ -57,12 +50,7 @@ const PredictionsOverlay: React.FC<PredictionsOverlayProps> = ({ cameraId, wsUrl
             canvas.height = video.clientHeight;
         }
 
-
         context.clearRect(0, 0, canvas.width, canvas.height);
-        context.strokeStyle = 'red';
-        context.lineWidth = 2;
-        context.font = '16px Arial';
-        context.fillStyle = 'red';
 
         predictions.forEach(p => {
             const x = p.x - p.width / 2;
@@ -73,9 +61,14 @@ const PredictionsOverlay: React.FC<PredictionsOverlayProps> = ({ cameraId, wsUrl
             const scaleX = canvas.width / 640;
             const scaleY = canvas.height / 480;
 
+            const color = getColorForClass(p.class_name);
+            context.strokeStyle = color;
+            context.lineWidth = 2;
             context.strokeRect(x * scaleX, y * scaleY, p.width*scaleX, p.height*scaleY);
             
-            const label = `${p.class_name} (${p.confidence.toFixed(2)})`;
+            const label = p.confidence.toFixed(2);
+            context.font = '10px Arial';
+            context.fillStyle = 'black';
             context.fillText(label, x * scaleX, y * scaleY - 5);
         });
 

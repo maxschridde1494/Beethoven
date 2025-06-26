@@ -1,5 +1,5 @@
 export interface Detection {
-  id: number;
+  id?: number;
   detection_id: string;  // UUID
   timestamp: string;     // datetime
   model_id: string;
@@ -13,11 +13,21 @@ export interface Detection {
   class_id: number;
 }
 
-export interface Snapshot {
-  asset_path: string;
-}
+export type Snapshot = string;
 
 export interface WebsocketConnectionInit {
   last_10_detections: Detection[];
-  last_5_snapshots: string[];
+  last_5_snapshots: Snapshot[];
+  initial_predictions: {[cameraId: string]: Detection[]};
+}
+
+export interface Prediction {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  confidence: number;
+  class: string;
+  class_id: number;
+  detection_id: string;
 }

@@ -1,11 +1,16 @@
 import './App.css'
 import LiveRtspPlayer from './components/LiveRtspPlayer'
+import { useRealTime } from './hooks/useRealTime';
+import InitialPredictions from './components/InitialPredictions';
+import type { Prediction } from './types';
 
 function App() {
-
+  const { initialPredictions } = useRealTime('ws://localhost:8000/ws');
+  
   return (
     <>
       <h1>Beethoven</h1>
+      <InitialPredictions predictions={initialPredictions as unknown as { [key: string]: Prediction[] }} />
       <div className="card">
         <LiveRtspPlayer
           cameraId="edge-right"
