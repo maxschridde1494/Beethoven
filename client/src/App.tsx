@@ -8,9 +8,11 @@ function App() {
   const { initialPredictions } = useRealTime('ws://localhost:8000/ws');
   
   return (
-    <>
+    <div>
       <h1>Beethoven</h1>
-      <InitialPredictions predictions={initialPredictions as unknown as { [key: string]: Prediction[] }} />
+      <div>
+        <InitialPredictions predictions={initialPredictions as unknown as { [key: string]: Prediction[] }} />
+      </div>
       <div className="card">
         <LiveRtspPlayer
           cameraId="edge-right"
@@ -18,7 +20,7 @@ function App() {
           wsUrl="ws://localhost:8000/ws/predictions"
         />
       </div>
-    </>
+    </div>
   )
 }
 

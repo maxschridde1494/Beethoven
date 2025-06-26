@@ -43,7 +43,6 @@ const PredictionsOverlay: React.FC<PredictionsOverlayProps> = ({ cameraId, wsUrl
         const context = canvas?.getContext('2d');
         if (!canvas || !context) return;
 
-        // Get the video element to match canvas size
         const video = canvas.parentElement?.querySelector('video');
         if (video) {
             canvas.width = video.clientWidth;
@@ -56,8 +55,6 @@ const PredictionsOverlay: React.FC<PredictionsOverlayProps> = ({ cameraId, wsUrl
             const x = p.x - p.width / 2;
             const y = p.y - p.height / 2;
             
-            // a video with resolution 640x480 is scaled to 100% width and auto height
-            // so we need to scale the predictions to the canvas size
             const scaleX = canvas.width / 640;
             const scaleY = canvas.height / 480;
 
@@ -66,8 +63,8 @@ const PredictionsOverlay: React.FC<PredictionsOverlayProps> = ({ cameraId, wsUrl
             context.lineWidth = 2;
             context.strokeRect(x * scaleX, y * scaleY, p.width*scaleX, p.height*scaleY);
             
-            const label = p.confidence.toFixed(2);
-            context.font = '10px Arial';
+            const label = `${(p.confidence * 100).toFixed(0)}%`;
+            context.font = '5px Arial';
             context.fillStyle = 'black';
             context.fillText(label, x * scaleX, y * scaleY - 5);
         });
@@ -81,7 +78,7 @@ const PredictionsOverlay: React.FC<PredictionsOverlayProps> = ({ cameraId, wsUrl
                 position: 'absolute',
                 top: 0,
                 left: 0,
-                pointerEvents: 'none', // Make canvas transparent to mouse events
+                pointerEvents: 'none',
             }}
         />
     );

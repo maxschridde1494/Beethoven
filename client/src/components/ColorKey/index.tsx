@@ -7,13 +7,13 @@ interface ColorKeyProps {
 const ColorKey: React.FC<ColorKeyProps> = ({ colorMap }) => {
     return (
         <div style={{ padding: '10px', border: '1px solid #ccc', borderRadius: '5px' }}>
-            <h4>Color Key</h4>
-            <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+            <div style={{ textAlign: 'left' }}>Color Key</div>
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'row', gap: '15px' }}>
                 {Object.entries(colorMap).map(([className, color]) => {
                     if (className === 'default') return null;
                     return (
-                        <li key={className} style={{ display: 'flex', alignItems: 'center', marginBottom: '5px' }}>
-                            <div style={{ width: '20px', height: '20px', backgroundColor: color, marginRight: '10px', border: '1px solid #000' }}></div>
+                        <li key={className} style={{ display: 'flex', alignItems: 'center' }}>
+                            <div style={{ width: '20px', height: '20px', backgroundColor: color, marginRight: '5px', border: '1px solid #000' }}></div>
                             <span>{className}</span>
                         </li>
                     );

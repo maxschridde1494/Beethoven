@@ -1,80 +1,66 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import type { Prediction } from '../../types';
-import { getColorForClass } from '../../utils/colorUtils';
+import BoundingBox from '../BoundingBox';
 
 interface InitialPredictionProps {
     cameraId: string;
     predictions: Prediction[];
 }
 
+const sortPredictions = (predictions: Prediction[]) => {
+    return [...predictions].sort((a, b) => {
+        const classA = a.class.toLowerCase();
+        const classB = b.class.toLowerCase();
+        if (classA === 'bl' && classB !== 'bl') return 1;
+        if (classA !== 'bl' && classB === 'bl') return -1;
+        return 0;
+    });
+}
+
 const InitialPrediction: React.FC<InitialPredictionProps> = ({ cameraId, predictions }) => {
     const imageRef = useRef<HTMLImageElement>(null);
-    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const [imageSize, setImageSize] = useState({ width: 0, height: 0, naturalWidth: 1, naturalHeight: 1 });
     const imageUrl = `http://localhost:8000/api/assets/${cameraId}-static.jpg`;
 
+    const handleImageLoad = () => {
+        if (imageRef.current) {
+            const { clientWidth, clientHeight, naturalWidth, naturalHeight } = imageRef.current;
+            setImageSize({ width: clientWidth, height: clientHeight, naturalWidth, naturalHeight });
+        }
+    };
+
     useEffect(() => {
-        const canvas = canvasRef.current;
-        const context = canvas?.getContext('2d');
-        const image = imageRef.current;
+        window.addEventListener('resize', handleImageLoad);
+        return () => window.removeEventListener('resize', handleImageLoad);
+    }, []);
 
-        if (!canvas || !context || !image) {
-            return;
-        }
-
-        const drawPredictions = () => {
-            if (!image) return;
-            
-            canvas.width = image.clientWidth;
-            canvas.height = image.clientHeight;
-            
-            const scaleX = canvas.width / image.naturalWidth;
-            const scaleY = canvas.height / image.naturalHeight;
-            
-            context.clearRect(0, 0, canvas.width, canvas.height);
-            
-            predictions.forEach(p => {
-                const x = p.x - p.width / 2;
-                const y = p.y - p.height / 2;
-                
-                const color = getColorForClass(p.class);
-                context.strokeStyle = color;
-                context.lineWidth = 2;
-                context.strokeRect(x * scaleX, y * scaleY, p.width * scaleX, p.height * scaleY);
-                
-                const label = p.confidence.toFixed(2);
-                context.font = '10px Arial';
-                context.fillStyle = 'black';
-                context.fillText(label, x * scaleX, y * scaleY - 5);
-            });
-        };
-
-        if (image.complete) {
-            drawPredictions();
-        } else {
-            image.onload = drawPredictions;
-        }
-
-        window.addEventListener('resize', drawPredictions);
-
-        return () => {
-            window.removeEventListener('resize', drawPredictions);
-        };
-
-    }, [predictions]);
+    const scaleX = imageSize.width / imageSize.naturalWidth;
+    const scaleY = imageSize.height / imageSize.naturalHeight;
+    const sortedPredictions = sortPredictions(predictions);
 
     return (
         <div style={{ marginBottom: '20px', flexShrink: 0 }}>
             <div style={{ position: 'relative' }}>
-                <img ref={imageRef} src={imageUrl} alt={cameraId} style={{ height: '300px', width: 'auto' }} />
-                <canvas
-                    ref={canvasRef}
-                    style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        pointerEvents: 'none',
-                    }}
+                <img
+                    ref={imageRef}
+                    src={imageUrl}
+                    alt={cameraId}
+                    style={{ height: '300px', width: 'auto' }}
+                    onLoad={handleImageLoad}
                 />
+                {sortedPredictions.map(p => (
+                    <BoundingBox
+                        key={p.detection_id}
+                        x={p.x}
+                        y={p.y}
+                        width={p.width}
+                        height={p.height}
+                        className={p.class}
+                        confidence={p.confidence}
+                        scaleX={scaleX}
+                        scaleY={scaleY}
+                    />
+                ))}
             </div>
             <div>{cameraId}</div>
         </div>
