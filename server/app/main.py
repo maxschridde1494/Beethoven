@@ -9,8 +9,8 @@ import asyncio
 from app.db import init_db
 from app.routes.detections import router as detection_router
 from app.routes.websockets import router as websocket_router
-from app.rtsp.stream import RTSPStreamManager
-from app.roboflow.detector import RoboflowDetectorManager
+from app.streams.ffmpeg_stream import StreamManager
+from app.roboflow.detector_manager import RoboflowDetectorManager
 from app.utils.handlers import setup_handlers
 from app.utils.logger import get_logger
 
@@ -33,24 +33,29 @@ def start_streams(loop):
         logger.error("Error: Each camera config must have 'name' and 'stream_url' fields")
 
     # Get singleton managers
-    stream_manager = RTSPStreamManager()
+    stream_manager = StreamManager()
     detector_manager = RoboflowDetectorManager()
     confidence_threshold = float(os.getenv("CONFIDENCE_THRESHOLD", "0.9"))
+    model_ids_str = os.getenv("ROBOFLOW_MODEL_ID", "")
+    model_ids = [model_id.strip() for model_id in model_ids_str.split(',') if model_id.strip()]
+
     logger.info(f"Confidence threshold: {confidence_threshold} (env: {os.getenv('CONFIDENCE_THRESHOLD')})")
+    logger.info(f"Roboflow Model IDs: {model_ids}")
 
     # Start streams and detectors
     for camera_id, url in camera_feeds.items():
         # Start stream
         stream = stream_manager.add_stream(camera_id, url)
         
-        # # Start detector for this stream
-        # detector_manager.add_detector(
-        #     stream=stream,
-        #     model_id=os.getenv("ROBOFLOW_MODEL_ID"),
-        #     confidence_threshold=confidence_threshold,
-        #     interval=float(os.getenv("INTERVAL", 1.0)),
-        #     loop=loop
-        # )
+        # Start detector for this stream
+        if model_ids:
+            detector_manager.add_detector(
+                stream=stream,
+                model_ids=model_ids,
+                confidence_threshold=confidence_threshold,
+                interval=float(os.getenv("INTERVAL", 1.0)),
+                loop=loop
+            )
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

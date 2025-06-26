@@ -7,6 +7,5 @@ python-dotenv
 inference-sdk
 blinker
 psycopg2-binary
-websockets
-# mido
+websockets# mido
 music21

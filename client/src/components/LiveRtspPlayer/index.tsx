@@ -1,51 +1,49 @@
 import React, { useEffect, useRef } from 'react';
 import Hls from 'hls.js';
+import PredictionsOverlay from '../PredictionsOverlay';
 
-/**
- * Props:
- *   src = full HLS URL, e.g. "http://host.docker.internal:8888/edge-right/index.m3u8"
- *   autoPlay = start immediately (default true)
- *   muted = start muted (Chrome blocks autoplay w/ sound)
- */
-export function LiveRtspPlayer({
-  src,
-  autoPlay = true,
-  muted = true,
-}: {
-  src: string;
-  autoPlay?: boolean;
-  muted?: boolean;
-}) {
-  const videoRef = useRef<HTMLVideoElement | null>(null);
+interface LiveRtspPlayerProps {
+  cameraId: string;
+  hlsUrl: string;
+  wsUrl: string;
+}
+
+const LiveRtspPlayer: React.FC<LiveRtspPlayerProps> = ({ cameraId, hlsUrl, wsUrl }) => {
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
-    if (!src) return;
+    const video = videoRef.current;
+    if (!video) return;
 
-    const video = videoRef.current!;
-    let hls: Hls | undefined;
+    let hls: Hls;
 
-    // Safari (and iOS) can play HLS directly
-    if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      video.src = src;
-    } else if (Hls.isSupported()) {
-      hls = new Hls({ enableWorker: true });
-      hls.loadSource(src);
+    if (Hls.isSupported()) {
+      hls = new Hls();
+      hls.loadSource(hlsUrl);
       hls.attachMedia(video);
-    } else {
-      console.error('This browser cannot play HLS or MediaSource');
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        video.play();
+      });
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = hlsUrl;
+      video.addEventListener('loadedmetadata', () => {
+        video.play();
+      });
     }
 
-    return () => hls?.destroy();
-  }, [src]);
+    return () => {
+      if (hls) {
+        hls.destroy();
+      }
+    };
+  }, [hlsUrl]);
 
   return (
-    <video
-      ref={videoRef}
-      controls
-      playsInline
-      autoPlay={autoPlay}
-      muted={muted}
-      style={{ width: '100%', height: 'auto', background: '#000' }}
-    />
+    <div style={{ position: 'relative', width: '100%', height: 'auto' }}>
+      <video ref={videoRef} controls autoPlay muted style={{ width: '100%', height: 'auto' }} />
+      <PredictionsOverlay cameraId={cameraId} wsUrl={wsUrl} />
+    </div>
   );
-}
+};
+
+export default LiveRtspPlayer;

@@ -1,31 +1,33 @@
-# app/streams/streamer.py
-"""High-reliability RTSP reader using FFmpeg.
+# app/streams/ffmpeg_stream.py
+"""High-reliability media stream reader using FFmpeg.
 
 This module provides:
-- RTSPStream: pulls frames via FFmpeg subprocess (no cv2.VideoCapture)
-- RTSPStreamManager: manages multiple streams (singleton)
+- FFmpegStream: pulls frames via FFmpeg subprocess from RTSP or file sources
+- StreamManager: manages multiple streams (singleton)
 """
 
 from __future__ import annotations
 
 import subprocess, threading, time, numpy as np, os
 from typing import Dict, Optional
+from urllib.parse import urlparse
 
 from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
 
-class RTSPStream:
-    """Continuously decodes an RTSP stream to BGR frames using FFmpeg."""
+class FFmpegStream:
+    """Continuously decodes a media stream to BGR frames using FFmpeg."""
 
     WIDTH: int = int(os.getenv("FRAME_WIDTH", 640))
     HEIGHT: int = int(os.getenv("FRAME_HEIGHT", 480))
     PIXELS: int = WIDTH * HEIGHT * 3  # 3 channels (bgr24)
 
-    def __init__(self, camera_id: str, rtsp_url: str):
+    def __init__(self, camera_id: str, source_url: str):
         self.camera_id = camera_id
-        self.rtsp_url = rtsp_url
+        self.source_url = source_url
+        self.is_file = not urlparse(source_url).scheme.startswith("rtsp")
         self.pipe: Optional[subprocess.Popen] = None
         self.latest: Optional[np.ndarray] = None
         self.lock = threading.Lock()
@@ -35,7 +37,7 @@ class RTSPStream:
         """Launch FFmpeg and start the reader thread."""
         self.running = True
         threading.Thread(target=self._reader_loop, daemon=True).start()
-        logger.info(f"[{self.camera_id}] reader started → {self.rtsp_url}")
+        logger.info(f"[{self.camera_id}] reader started → {self.source_url}")
 
     def get_latest_frame(self) -> Optional[np.ndarray]:
         """Return a copy of the most recent frame (or None)."""
@@ -49,22 +51,20 @@ class RTSPStream:
             self.pipe.terminate()
 
     def _ffmpeg_cmd(self):
-        """
-        Output raw BGR frames to stdout.
-        -rtsp_transport tcp      → more stable than UDP behind Docker NAT
-        -vf scale                → resize
-        -pix_fmt bgr24           → OpenCV-friendly pixel format
-        """
-        return [
-            "ffmpeg",
-            "-rtsp_transport", "tcp",
-            "-i", self.rtsp_url,
+        """Builds FFmpeg command based on source type."""
+        common_args = [
             "-vf", f"scale={self.WIDTH}:{self.HEIGHT}",
             "-pix_fmt", "bgr24",
             "-f", "rawvideo",
             "-loglevel", "error",
-            "-"                       # stdout
+            "-",  # stdout
         ]
+        if self.is_file:
+            # -re flag streams local files at their native framerate
+            return ["ffmpeg", "-re", "-i", self.source_url, *common_args]
+        else:
+            # TCP transport is more reliable for RTSP
+            return ["ffmpeg", "-rtsp_transport", "tcp", "-i", self.source_url, *common_args]
 
     def _reader_loop(self) -> None:
         """Reader thread that pulls frames from FFmpeg."""
@@ -100,7 +100,7 @@ class RTSPStream:
         logger.info(f"[{self.camera_id}] reader stopped")
 
 
-class RTSPStreamManager:
+class StreamManager:
     """Singleton manager for multiple RTSP streams."""
     
     _instance = None
@@ -115,30 +115,30 @@ class RTSPStreamManager:
         if self._initialized:
             return
             
-        self.streams: Dict[str, RTSPStream] = {}
+        self.streams: Dict[str, FFmpegStream] = {}
         self._initialized = True
 
-    def add_stream(self, camera_id: str, url: str) -> RTSPStream:
+    def add_stream(self, camera_id: str, url: str) -> FFmpegStream:
         """Add and start a new RTSP stream.
         
         Args:
             camera_id: Unique identifier for the camera
-            url: RTSP URL to stream from
+            url: RTSP URL or file path to stream from
             
         Returns:
-            The created RTSPStream instance
+            The created FFmpegStream instance
         """
         if camera_id in self.streams:
             logger.warning(f"Stream {camera_id} already exists, stopping old one")
             self.stop_stream(camera_id)
 
-        stream = RTSPStream(camera_id, url)
+        stream = FFmpegStream(camera_id, url)
         self.streams[camera_id] = stream
         stream.start()
         logger.info(f"Stream {camera_id} started!")
         return stream
 
-    def get_stream(self, camera_id: str) -> Optional[RTSPStream]:
+    def get_stream(self, camera_id: str) -> Optional[FFmpegStream]:
         """Get a stream by camera ID."""
         return self.streams.get(camera_id)
 

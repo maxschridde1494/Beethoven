@@ -15,6 +15,15 @@ router = APIRouter(prefix="", tags=["RTP"])
 
 from app.utils.signals import high_confidence_detection_made, detection_made, snapshot_made, notes_detected
 _clients: Set[WebSocket] = set()
+_prediction_clients: Set[WebSocket] = set()
+
+async def broadcast_to_clients(clients: Set[WebSocket], data: dict):
+    """Helper to broadcast a JSON message to a set of WebSocket clients."""
+    for websocket in list(clients):
+        try:
+            await websocket.send_json(data)
+        except Exception as e:
+            logger.error(f"{type(e)} error sending data to client: {e}")
 
 async def get_initial_data():
     """Get the initial data for a new websocket connection."""
@@ -93,49 +102,66 @@ async def websocket_endpoint(websocket: WebSocket):
         logger.info("Client disconnected")
         _clients.remove(websocket)
 
+@router.websocket("/ws/predictions")
+async def predictions_websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    _prediction_clients.add(websocket)
+    logger.info(f"New prediction client connected: {websocket}")
+    try:
+        while True:
+            await asyncio.sleep(60)  # Keep connection alive
+            await websocket.send_json({"message": "ping"})
+    except WebSocketDisconnect:
+        logger.info("Prediction client disconnected")
+        _prediction_clients.remove(websocket)
+
 # broadcast on every detection
 @high_confidence_detection_made.connect
 async def publish_high_confidence(sender, frame, **kw):
     kw["timestamp"] = kw["timestamp"].isoformat()
-
-    for websocket in list(_clients):
-        try:
-          await websocket.send_json({
-                  "timestamp": datetime.now().isoformat(),
-                  "status": "active",
-                  "message": "high_confidence_detection_made",
-                  "data": kw
-              })
-        except Exception as e:
-            logger.error(f"{type(e)} error sending detection to client: {e}")
+    
+    # Broadcast to general clients
+    await broadcast_to_clients(_clients, {
+        "timestamp": datetime.now().isoformat(),
+        "status": "active",
+        "message": "high_confidence_detection_made",
+        "data": kw
+    })
+    
+    # Broadcast to prediction clients
+    await broadcast_to_clients(_prediction_clients, {
+        "timestamp": datetime.now().isoformat(),
+        "message": "high_confidence_detection",
+        "data": kw
+    })
 
 @detection_made.connect
 async def publish_detection(sender, frame, **kw):
     kw["timestamp"] = kw["timestamp"].isoformat()
 
-    for websocket in list(_clients):
-        try:
-          await websocket.send_json({
-                  "timestamp": datetime.now().isoformat(),
-                  "status": "active",
-                  "message": "detection_made",
-                  "data": kw
-              })
-        except Exception as e:
-            logger.error(f"{type(e)} error sending detection to client: {e}")
+    # Broadcast to general clients
+    await broadcast_to_clients(_clients, {
+        "timestamp": datetime.now().isoformat(),
+        "status": "active",
+        "message": "detection_made",
+        "data": kw
+    })
+    
+    # Broadcast to prediction clients
+    await broadcast_to_clients(_prediction_clients, {
+        "timestamp": datetime.now().isoformat(),
+        "message": "detection",
+        "data": kw
+    })
 
 @snapshot_made.connect
 async def publish_snapshot(sender, frame, **kw):
-    for websocket in list(_clients):
-        try:
-          await websocket.send_json({
-                  "timestamp": datetime.now().isoformat(),
-                  "status": "active",
-                  "message": "snapshot_made",
-                  "data": {"asset_path": kw["asset_path"]}
-              })
-        except Exception as e:
-            logger.error(f"{type(e)} error sending snapshot to client: {e}")
+    await broadcast_to_clients(_clients, {
+        "timestamp": datetime.now().isoformat(),
+        "status": "active",
+        "message": "snapshot_made",
+        "data": {"asset_path": kw["asset_path"]}
+    })
 
 # music21 notation
 
@@ -170,13 +196,9 @@ async def ws_notation(sender, frame, **kw):
     if rel % (2*GRID) == 0:
         xml = score.write('musicxml')
 
-        for websocket in list(_clients):
-            try:
-                await websocket.send_json({
-                    "timestamp": datetime.now().isoformat(),
-                    "status": "active",
-                    "message": "snapshot_made",
-                    "data": {"xml": xml}
-                })
-            except Exception as e:
-                logger.error(f"{type(e)} error sending snapshot to client: {e}")
+        await broadcast_to_clients(_clients, {
+            "timestamp": datetime.now().isoformat(),
+            "status": "active",
+            "message": "snapshot_made",
+            "data": {"xml": xml}
+        })
