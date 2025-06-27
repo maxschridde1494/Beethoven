@@ -60,13 +60,19 @@ const PredictionsOverlay: React.FC<PredictionsOverlayProps> = ({ cameraId, wsUrl
 
             const color = getColorForClass(p.class_name);
             context.strokeStyle = color;
-            context.lineWidth = 2;
+            context.lineWidth = 4;
             context.strokeRect(x * scaleX, y * scaleY, p.width*scaleX, p.height*scaleY);
             
-            const label = `${(p.confidence * 100).toFixed(0)}%`;
-            context.font = '5px Arial';
-            context.fillStyle = 'black';
-            context.fillText(label, x * scaleX, y * scaleY - 5);
+            const label = `${p.class_name} ${(p.confidence * 100).toFixed(0)}%`;
+            const fontSize = 16;
+            context.font = `bold ${fontSize}px Arial`;
+            
+            const textMetrics = context.measureText(label);
+            context.fillStyle = color;
+            context.fillRect(x*scaleX, y*scaleY - fontSize, textMetrics.width + 8, fontSize + 4)
+
+            context.fillStyle = "white";
+            context.fillText(label, x * scaleX + 4, y * scaleY - 2);
         });
 
     }, [predictions]);

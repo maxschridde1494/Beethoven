@@ -62,7 +62,7 @@ class FFmpegStream:
         if self.is_file:
             # -re flag streams local files at their native framerate
             # -stream_loop -1 makes the video loop indefinitely
-            return ["ffmpeg", "-re", "-stream_loop", "-1", "-i", self.source_url, *common_args]
+            return ["ffmpeg", "-re", "-i", self.source_url, *common_args]
         else:
             # TCP transport is more reliable for RTSP
             return ["ffmpeg", "-rtsp_transport", "tcp", "-i", self.source_url, *common_args]

@@ -10,9 +10,10 @@ import asyncio
 from concurrent.futures import ThreadPoolExecutor
 
 from app.utils.logger import get_logger
-from app.utils.signals import detection_made, high_confidence_detection_made, notes_detected
+from app.utils.signals import detection_made
 from app.roboflow.client import create_client
 from app.streams.ffmpeg_stream import FFmpegStream
+from app.utils.benchmark import benchmark
 
 logger = get_logger(__name__)
 
@@ -44,7 +45,10 @@ class RoboflowMultiModelDetector:
         self.model_ids = model_ids
         self.confidence_threshold = confidence_threshold
         self.interval = interval
-        self.loop = loop or asyncio.get_event_loop()
+        self.loop = loop
+
+        if self.loop is None:
+            raise ValueError("An asyncio event loop must be provided.")
 
         # State
         self.running = False
@@ -71,16 +75,17 @@ class RoboflowMultiModelDetector:
         if self.thread and self.thread.is_alive():
             self.thread.join(timeout=5.0)
 
+    @benchmark("infer_single_model")
     def _infer_single_model(self, frame: object, model_id: str) -> dict:
         """Run inference for a single model."""
         return self.client.infer(inference_input=frame, model_id=model_id)
 
     async def _process_predictions(self, predictions: List[dict], frame) -> None:
         """Process a list of predictions and emit appropriate signals."""
-        current_time = datetime.now()
+        current_time = datetime.now().isoformat()
         
         all_detections = []
-        high_confidence_detections = []
+        # high_confidence_detections = []
         
         for prediction in predictions:
             try:
@@ -89,7 +94,7 @@ class RoboflowMultiModelDetector:
                 detection_data = {
                     "detection_id": prediction["detection_id"],
                     "timestamp": current_time,
-                    "model_id": prediction.get("model_id", "unknown"), # model_id may not be in prediction payload
+                    "model_id": self.model_ids[0],
                     "camera_id": self.camera_id,
                     "x": prediction["x"],
                     "y": prediction["y"],
@@ -102,20 +107,21 @@ class RoboflowMultiModelDetector:
                 
                 all_detections.append(detection_data)
                 
-                if confidence > self.confidence_threshold:
-                    high_confidence_detections.append(detection_data)
+                # if confidence > self.confidence_threshold:
+                #     high_confidence_detections.append(detection_data)
                     
             except Exception as e:
                 logger.error(f"Error processing prediction: {e}\n{prediction}")
         
         if all_detections:
-            await detection_made.send_async(self, frame=frame, detections=all_detections)
-        
-        if high_confidence_detections:
-            await high_confidence_detection_made.send_async(self, frame=frame, detections=high_confidence_detections)
-        
-        if all_detections:
-            await notes_detected.send_async(self, frame=frame, detections=all_detections)
+            # logger.info(f"[DETECTOR {self.camera_id}] Sending detections: {all_detections}\n\nReceivers: {detection_made.receivers}")  # should be ≥ 2
+            results = await detection_made.send_async(
+                self, 
+                frame=frame, 
+                camera_id=self.camera_id, 
+                detections=all_detections
+            )
+            # logger.info(f"[DETECTOR {self.camera_id}] Results: {results}")
 
     def _loop(self) -> None:
         """Main detection loop."""
@@ -123,6 +129,7 @@ class RoboflowMultiModelDetector:
             while self.running:
                 frame = self.stream.get_latest_frame()
                 if frame is not None:
+                    # logger.info(f"[DETECTOR {self.camera_id}] Processing frame")
                     try:
                         # Run inference for all models in parallel
                         futures = [executor.submit(self._infer_single_model, frame, model_id) for model_id in self.model_ids]
@@ -134,10 +141,14 @@ class RoboflowMultiModelDetector:
                                 all_predictions.extend(result["predictions"])
 
                         if all_predictions:
+                            assert self.loop is not None
                             coro = self._process_predictions(all_predictions, frame)
+                            # logger.info("detector loop: %s", id(self.loop))
                             asyncio.run_coroutine_threadsafe(coro, self.loop)
                                     
                     except Exception as e:
                         logger.error(f"Error processing frame: {e}")
+                else:
+                    logger.warning(f"[DETECTOR {self.camera_id}] No frame available")
                         
                 time.sleep(self.interval) 

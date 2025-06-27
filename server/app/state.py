@@ -2,6 +2,12 @@
 Global state for the application.
 """
 from typing import Dict, Any, List
+from sqlmodel import Session, select, func
+from app.db import get_session
+from app.models.detection import Detection
+from app.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 # This dictionary will hold the application's global state.
 # For example, it can store initialization results or other shared data.
@@ -15,4 +21,10 @@ def set_initial_predictions(predictions: Dict[str, List[dict]]):
 
 def get_initial_predictions() -> Dict[str, List[dict]]:
     """Gets the initial predictions from the global state."""
-    return app_state.get("initial_predictions", {}) 
+    return app_state.get("initial_predictions", {})
+
+def get_run_id() -> int:
+    return app_state.get("run_id", 0)
+
+def set_run_id(run_id: int):
+    app_state["run_id"] = run_id

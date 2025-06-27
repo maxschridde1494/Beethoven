@@ -7,8 +7,9 @@ from contextlib import asynccontextmanager
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 import cv2
+from datetime import datetime
 
-from app.db import init_db
+from app.db import init_db, create_detection, get_next_run_id
 from app.routes.detections import router as detection_router
 from app.routes.websockets import router as websocket_router
 from app.streams.ffmpeg_stream import StreamManager
@@ -16,8 +17,7 @@ from app.roboflow.detector_manager import RoboflowDetectorManager
 from app.utils.handlers import setup_handlers
 from app.utils.logger import get_logger
 from app.roboflow.client import create_client
-from app.state import set_initial_predictions
-
+from app.state import set_run_id, set_initial_predictions
 
 load_dotenv()
 
@@ -33,7 +33,6 @@ def _start_ffmpeg_stream_to_mediamtx(camera_id: str, video_path: str):
     command = [
         "ffmpeg",
         "-re",
-        "-stream_loop", "-1",
         "-i", video_path,
         "-c:v", "copy",     # Copy video without re-encoding
         "-an",             # Disable audio
@@ -82,9 +81,31 @@ def run_initial_inference(camera_config: list):
     with ThreadPoolExecutor() as executor:
         results = executor.map(_infer, camera_config)
         
+    current_time = datetime.now().isoformat()
+    run_id = get_next_run_id()
+    set_run_id(run_id)
+
     for result in results:
         if result:
             camera_id, predictions = result
+            for prediction in predictions:
+                detection_data = {
+                    "detection_id": prediction["detection_id"],
+                    "timestamp": current_time,
+                    "model_id": init_model_id,
+                    "camera_id": camera_id,
+                    "x": prediction["x"],
+                    "y": prediction["y"],
+                    "width": prediction["width"],
+                    "height": prediction["height"],
+                    "confidence": prediction["confidence"],
+                    "class_name": prediction["class"],
+                    "class_id": prediction["class_id"],
+                    "run_id": run_id
+                }
+
+                create_detection(run_id, detection_data)
+
             if camera_id and predictions is not None:
                 initial_predictions[camera_id] = predictions
 
@@ -170,7 +191,6 @@ def root():
 SNAPSHOT_DIR = os.getenv("SNAPSHOT_DIR", "app/snapshots")
 app.mount(
     "/assets",
-    # StaticFiles(directory=SNAPSHOT_DIR),
     StaticFiles(directory="app/assets"),
     name="assets",
 )

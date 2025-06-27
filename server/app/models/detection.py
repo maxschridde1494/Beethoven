@@ -34,3 +34,4 @@ class Detection(SQLModel, table=True):
     # Classification
     class_name: str = Field(description="Class name of detected object (e.g. 'pets')")
     class_id: int = Field(description="Numeric ID of the detected class") 
+    run_id: int = Field(description="ID of the run that made the detection")
