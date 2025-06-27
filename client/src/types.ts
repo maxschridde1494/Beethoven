@@ -11,6 +11,8 @@ export interface Detection {
   confidence: number;
   class_name: string;
   class_id: number;
+  key_number?: number;
+  note_name?: string;
 }
 
 export type Snapshot = string;

@@ -45,7 +45,7 @@ const InitialPrediction: React.FC<InitialPredictionProps> = ({ cameraId, predict
                     ref={imageRef}
                     src={imageUrl}
                     alt={cameraId}
-                    style={{ height: '300px', width: 'auto' }}
+                    style={{ height: '400px', width: 'auto' }}
                     onLoad={handleImageLoad}
                 />
                 {sortedPredictions.map(p => (
@@ -59,6 +59,8 @@ const InitialPrediction: React.FC<InitialPredictionProps> = ({ cameraId, predict
                         confidence={p.confidence}
                         scaleX={scaleX}
                         scaleY={scaleY}
+                        key_number={p.key_number}
+                        note_name={p.note_name}
                     />
                 ))}
             </div>

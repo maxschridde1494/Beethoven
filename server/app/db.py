@@ -17,6 +17,10 @@ def get_session() -> Session:
 def create_detection(run_id: int, data: dict) -> Detection:
     """Creates and stores a detection event."""
     detection_data = data.copy()
+    # TODO: enhance data model to store key_number and note_name from detection_data
+    detection_data.pop('key_number', None)
+    detection_data.pop('note_name', None)
+    
     if isinstance(detection_data.get('detection_id'), str):
         detection_data['detection_id'] = UUID(detection_data['detection_id'])
 

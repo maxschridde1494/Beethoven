@@ -14,8 +14,8 @@ const InitialPredictions: React.FC<InitialPredictionsProps> = ({ predictions }) 
     }
 
     return (
-        <div className="card">
-            <ColorKey colorMap={CLASS_COLORS} />
+        <div>
+            {/* <ColorKey colorMap={CLASS_COLORS} /> */}
             <div style={{ marginTop: 10, display: 'flex', flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
                 {Object.entries(predictions).map(([cameraId, preds]) => (
                     <InitialPrediction key={cameraId} cameraId={cameraId} predictions={preds} />

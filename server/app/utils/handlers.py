@@ -37,7 +37,7 @@ async def setup_handlers():
     from app.utils.signals import detection_made
     
     # Connect handlers to signals
-    detection_made.connect(handle_detections_storage)
+    # detection_made.connect(handle_detections_storage)
     # detection_made.connect(handle_detections_to_musical_events)
 
 # async def handle_detections_to_musical_events(sender, frame, camera_id, **kwargs):

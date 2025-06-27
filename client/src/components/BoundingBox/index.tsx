@@ -10,6 +10,8 @@ interface BoundingBoxProps {
     confidence: number;
     scaleX: number;
     scaleY: number;
+    key_number?: number;
+    note_name?: string;
 }
 
 const getZIndex = (className: string) => {
@@ -23,7 +25,7 @@ const getZIndex = (className: string) => {
     }
 };
 
-const BoundingBox: React.FC<BoundingBoxProps> = ({ x, y, width, height, className, confidence, scaleX, scaleY }) => {
+const BoundingBox: React.FC<BoundingBoxProps> = ({ x, y, width, height, className, confidence, scaleX, scaleY, key_number, note_name }) => {
     const [isHovered, setIsHovered] = useState(false);
 
     const boxStyle: React.CSSProperties = {
@@ -39,9 +41,10 @@ const BoundingBox: React.FC<BoundingBoxProps> = ({ x, y, width, height, classNam
         display: 'flex',
         alignItems: 'flex-start',
         justifyContent: 'center',
-        fontSize: '6px',
+        fontSize: '10px',
         zIndex: getZIndex(className),
         pointerEvents: 'auto',
+        textAlign: 'center'
     };
 
     return (
@@ -50,7 +53,11 @@ const BoundingBox: React.FC<BoundingBoxProps> = ({ x, y, width, height, classNam
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
         >
-            {isHovered ? `${(confidence * 100).toFixed(0)}%` : className}
+            <div>
+                <div>{note_name}</div>
+                <div>{key_number}</div>
+                <div>{isHovered ? `${(confidence * 100).toFixed(0)}%` : className}</div>
+            </div>
         </div>
     );
 };
