@@ -1,11 +1,11 @@
 import React from 'react';
-import type { Prediction } from '../../types';
+import type { Detection } from '../../types';
 import InitialPrediction from '../InitialPrediction';
 import ColorKey from '../ColorKey';
 import { CLASS_COLORS } from '../../utils/colorUtils';
 
 interface InitialPredictionsProps {
-    predictions: { [cameraId:string]: Prediction[] };
+    predictions: { [cameraId:string]: Detection[] };
 }
 
 const InitialPredictions: React.FC<InitialPredictionsProps> = ({ predictions }) => {

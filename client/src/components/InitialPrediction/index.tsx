@@ -1,16 +1,16 @@
 import React, { useRef, useState, useEffect } from 'react';
-import type { Prediction } from '../../types';
+import type { Detection } from '../../types';
 import BoundingBox from '../BoundingBox';
 
 interface InitialPredictionProps {
     cameraId: string;
-    predictions: Prediction[];
+    predictions: Detection[];
 }
 
-const sortPredictions = (predictions: Prediction[]) => {
+const sortPredictions = (predictions: Detection[]) => {
     return [...predictions].sort((a, b) => {
-        const classA = a.class.toLowerCase();
-        const classB = b.class.toLowerCase();
+        const classA = a.class_name.toLowerCase();
+        const classB = b.class_name.toLowerCase();
         if (classA === 'bl' && classB !== 'bl') return 1;
         if (classA !== 'bl' && classB === 'bl') return -1;
         return 0;
@@ -55,7 +55,7 @@ const InitialPrediction: React.FC<InitialPredictionProps> = ({ cameraId, predict
                         y={p.y}
                         width={p.width}
                         height={p.height}
-                        className={p.class}
+                        className={p.class_name}
                         confidence={p.confidence}
                         scaleX={scaleX}
                         scaleY={scaleY}

@@ -14,8 +14,9 @@ def init_db():
 def get_session() -> Session:
     return Session(engine)
 
-def create_detection(run_id: int, detection_data: dict) -> Detection:
+def create_detection(run_id: int, data: dict) -> Detection:
     """Creates and stores a detection event."""
+    detection_data = data.copy()
     if isinstance(detection_data.get('detection_id'), str):
         detection_data['detection_id'] = UUID(detection_data['detection_id'])
 

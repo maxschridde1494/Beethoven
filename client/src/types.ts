@@ -20,14 +20,3 @@ export interface WebsocketConnectionInit {
   last_5_snapshots: Snapshot[];
   initial_predictions: {[cameraId: string]: Detection[]};
 }
-
-export interface Prediction {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  confidence: number;
-  class: string;
-  class_id: number;
-  detection_id: string;
-}

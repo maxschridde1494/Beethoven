@@ -5,19 +5,16 @@ from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 from contextlib import asynccontextmanager
 import asyncio
-from concurrent.futures import ThreadPoolExecutor
-import cv2
-from datetime import datetime
 
-from app.db import init_db, create_detection, get_next_run_id
+from app.db import init_db, get_next_run_id
 from app.routes.detections import router as detection_router
 from app.routes.websockets import router as websocket_router
 from app.streams.ffmpeg_stream import StreamManager
 from app.roboflow.detector_manager import RoboflowDetectorManager
 from app.utils.handlers import setup_handlers
 from app.utils.logger import get_logger
-from app.roboflow.client import create_client
 from app.state import set_run_id, set_initial_predictions
+from app.roboflow.utils.detection import run_initial_inference
 
 load_dotenv()
 
@@ -43,76 +40,6 @@ def _start_ffmpeg_stream_to_mediamtx(camera_id: str, video_path: str):
     logger.info(f"Starting ffmpeg stream for {camera_id} from {video_path} to {rtsp_url}")
     # Run ffmpeg in the background, ignoring its output
     subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
-
-def run_initial_inference(camera_config: list):
-    """Runs inference on a static image for each camera at startup."""
-    init_model_id = os.getenv("ROBOFLOW_INIT_MODEL_ID")
-    if not init_model_id:
-        logger.info("No initial model ID provided, skipping initial inference.")
-        return
-
-    client = create_client()
-    initial_predictions = {}
-
-    def _infer(cam_config):
-        image_path = cam_config.get("initialization-img-path")
-        camera_id = cam_config.get("name")
-        if not image_path or not camera_id:
-            return None, None
-        
-        if not os.path.exists(image_path):
-            logger.error(f"Initial image not found at {image_path}")
-            return camera_id, None
-
-        try:
-            image = cv2.imread(image_path)
-            predictions = client.infer(image, model_id=init_model_id)
-            if predictions and "predictions" in predictions:
-                logger.info(f"Initial inference for {camera_id} got {len(predictions['predictions'])} predictions.")
-                return camera_id, predictions["predictions"]
-            else:
-                logger.info(f"Initial inference for {camera_id} ran but returned no predictions.")
-                return camera_id, []
-        except Exception as e:
-            logger.error(f"Error during initial inference for {camera_id}: {e}")
-            return camera_id, None
-
-    with ThreadPoolExecutor() as executor:
-        results = executor.map(_infer, camera_config)
-        
-    current_time = datetime.now().isoformat()
-    run_id = get_next_run_id()
-    set_run_id(run_id)
-
-    for result in results:
-        if result:
-            camera_id, predictions = result
-            for prediction in predictions:
-                detection_data = {
-                    "detection_id": prediction["detection_id"],
-                    "timestamp": current_time,
-                    "model_id": init_model_id,
-                    "camera_id": camera_id,
-                    "x": prediction["x"],
-                    "y": prediction["y"],
-                    "width": prediction["width"],
-                    "height": prediction["height"],
-                    "confidence": prediction["confidence"],
-                    "class_name": prediction["class"],
-                    "class_id": prediction["class_id"],
-                    "run_id": run_id
-                }
-
-                create_detection(run_id, detection_data)
-
-            if camera_id and predictions is not None:
-                initial_predictions[camera_id] = predictions
-
-    if initial_predictions:
-        set_initial_predictions(initial_predictions)
-        logger.info(f"Initial inference complete for cameras: {list(initial_predictions.keys())}")
-
 
 def start_streams(loop, camera_config: list):
     """Initialize and start RTSP streams and detectors."""
@@ -167,7 +94,13 @@ async def lifespan(app: FastAPI):
     except json.JSONDecodeError:
         logger.error("Error: CAM_PROXY_CONFIG environment variable is not valid JSON")
 
-    run_initial_inference(camera_config)
+    run_id = get_next_run_id()
+    set_run_id(run_id)
+    initial_predictions = run_initial_inference(run_id, camera_config)
+    if initial_predictions:
+        set_initial_predictions(initial_predictions)
+        logger.info(f"Initial inference complete for cameras: {list(initial_predictions.keys())}")
+
     start_streams(loop, camera_config)
     yield
 
