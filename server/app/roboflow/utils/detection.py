@@ -73,15 +73,13 @@ def run_initial_inference(run_id: int, camera_config: list):
                 create_detection(run_id, detection_data)
 
             if camera_id and augmented_predictions is not None:
-                logger.info("annotate predictions for camera_id: %s", camera_id)
-                annotated = annotate_predictions(
+                annotated_predictions = annotate_predictions(
                     augmented_predictions,        # your list of detection dicts
                     left_white_seed=seed_keys[camera_id]["white"],       # first visible white key = #13
                     left_black_seed=seed_keys[camera_id]["black"],       # first visible black key = #14
                     direction=seed_keys[camera_id]["direction"]
                 )
-                logger.info(f"Annotated predictions for {camera_id}: {annotated}")
-                initial_predictions[camera_id] = augmented_predictions
+                initial_predictions[camera_id] = annotated_predictions
 
     return initial_predictions
 

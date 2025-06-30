@@ -114,14 +114,12 @@ class RoboflowMultiModelDetector:
                 logger.error(f"Error processing prediction: {e}\n{prediction}")
         
         if all_detections:
-            # logger.info(f"[DETECTOR {self.camera_id}] Sending detections: {all_detections}\n\nReceivers: {detection_made.receivers}")  # should be ≥ 2
-            results = await detection_made.send_async(
+            await detection_made.send_async(
                 self, 
                 frame=frame, 
                 camera_id=self.camera_id, 
                 detections=all_detections
             )
-            # logger.info(f"[DETECTOR {self.camera_id}] Results: {results}")
 
     def _loop(self) -> None:
         """Main detection loop."""
