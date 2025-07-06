@@ -86,6 +86,17 @@ def run_initial_inference(run_id: int, camera_config: list):
 
     return initial_predictions
 
+# seed_keys = {
+#     "edge-left": {
+#         "white": 9, # [1, 3, 4, 6, 8, 9, 11, 13, 15, 16, 18, 20, 21, 23, 25, 27, 28, 30, 32, 33, 35, 37, 39, 40, 42, 44, 45, 47, 49, 51, 52, 54, 56, 57, 59, 61, 63, 64, 66, 68, 69, 71, 73, 75, 76, 78, 80, 81, 83, 85, 87, 88]
+#         "black": 2   # [2, 5, 7, 10, 12, 14, 17, 19, 22, 24, 26, 29, 31, 34, 36, 38, 41, 43, 46, 48, 50, 53, 55, 58, 60, 62, 65, 67, 70, 72, 74, 77, 79, 82, 84, 86]
+#     },
+#     "middle-left": {
+#         "white": 13, # [1, 3, 4, 6, 8, 9, 11, 13, 15, 16, 18, 20, 21, 23, 25, 27, 28, 30, 32, 33, 35, 37, 39, 40, 42, 44, 45, 47, 49, 51, 52, 54, 56, 57, 59, 61, 63, 64, 66, 68, 69, 71, 73, 75, 76, 78, 80, 81, 83, 85, 87, 88]
+#         "black": 19 # [2, 5, 7, 10, 12, 14, 17, 19, 22, 24, 26, 29, 31, 34, 36, 38, 41, 43, 46, 48, 50, 53, 55, 58, 60, 62, 65, 67, 70, 72, 74, 77, 79, 82, 84, 86]
+#     }
+# }
+
 # ────────────────── keyboard metadata ──────────────────
 _NOTE_NAMES: List[str] = (
     "A A# B  "
@@ -168,8 +179,12 @@ def annotate_predictions(
 
     forward = direction.lower() == "ltr"
 
-    whites = sorted((p for p in preds if p["class_name"] == "wh"), key=lambda d: d["x"])
-    blacks = sorted((p for p in preds if p["class_name"] == "bl"), key=lambda d: d["x"])
+    whites = sorted((p for p in preds if p["class_name"] in ("wh", "p white")), key=lambda d: d["x"])
+    blacks = sorted((p for p in preds if p["class_name"] in ("bl", "p black")), key=lambda d: d["x"])
+
+    # If there are no white keys, we can't determine the notes
+    if not whites:
+        raise ValueError("No white keys found in predictions")
 
     white_seq = _slice_from(left_white_seed, WHITE_KEYS, len(whites), forward)
     black_seq = _slice_from(left_black_seed, BLACK_KEYS, len(blacks), forward)

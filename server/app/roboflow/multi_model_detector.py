@@ -103,7 +103,9 @@ class RoboflowMultiModelDetector:
                     "height": prediction["height"],
                     "confidence": confidence,
                     "class_name": prediction["class"],
-                    "class_id": prediction["class_id"]
+                    "class_id": prediction["class_id"],
+                    "key_number": None,
+                    "note_name": None
                 }
                 
                 all_detections.append(detection_data)

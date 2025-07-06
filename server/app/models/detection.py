@@ -1,7 +1,7 @@
 """
-Detection model for storing pet detection events.
+Detection model for storing object detection events.
 
-This model represents a single pet detection event from the Roboflow model,
+This model represents a single object detection event from the Roboflow model,
 including position, confidence, and metadata.
 """
 
@@ -12,7 +12,7 @@ from uuid import UUID
 
 
 class Detection(SQLModel, table=True):
-    """A single pet detection event."""
+    """A single object detection event."""
     
     id: Optional[int] = Field(default=None, primary_key=True)
     
@@ -35,3 +35,7 @@ class Detection(SQLModel, table=True):
     class_name: str = Field(description="Class name of detected object (e.g. 'pets')")
     class_id: int = Field(description="Numeric ID of the detected class") 
     run_id: int = Field(description="ID of the run that made the detection")
+    
+    # Musical info
+    key_number: Optional[int] = Field(default=None, description="MIDI key number of the detected note")
+    note_name: Optional[str] = Field(default=None, description="Name of the detected note (e.g. C#4)")
