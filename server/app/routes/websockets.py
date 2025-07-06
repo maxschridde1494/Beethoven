@@ -1,10 +1,16 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi.encoders import jsonable_encoder
 import asyncio
 from typing import Set
 from datetime import datetime
 
 from app.utils.logger import get_logger
 from app.state import get_initial_predictions
+from app.utils.detection_utils import (
+    get_recent_detections,
+    serialize_detections,
+    create_detection_objects_from_data
+)
 
 logger = get_logger(__name__)
 
@@ -12,6 +18,8 @@ router = APIRouter(prefix="", tags=["RTP"])
 
 from app.utils.signals import detection_made
 _clients: Set[WebSocket] = set()
+
+
 
 async def broadcast_to_clients(clients: Set[WebSocket], data: dict):
     """Helper to broadcast a JSON message to a set of WebSocket clients."""
@@ -58,6 +66,15 @@ async def websocket_endpoint(websocket: WebSocket):
 
 @detection_made.connect
 async def publish_detection(sender, frame, camera_id, **kw):
+    """Publish detection data to WebSocket clients using jsonable_encoder."""
+    detections_data = kw.get('detections', [])
+    
+    # Convert detection dictionaries to Detection objects for consistent serialization
+    detection_objects = create_detection_objects_from_data(detections_data)
+    
+    # Use jsonable_encoder to serialize the Detection objects
+    serialized_detections = serialize_detections(detection_objects)
+    
     # Broadcast to general clients
     await broadcast_to_clients(_clients, {
         "timestamp": datetime.now().isoformat(),
@@ -65,6 +82,6 @@ async def publish_detection(sender, frame, camera_id, **kw):
         "message": "detection_made",
         "data": {
             "camera_id": camera_id,
-            **kw
+            "detections": serialized_detections
         }
     })
