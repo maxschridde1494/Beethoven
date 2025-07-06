@@ -21,6 +21,9 @@ load_dotenv()
 logger = get_logger(__name__)
 ffmpeg_processes = []
 
+# Global variable to store camera seed configuration
+camera_seed_config = {}
+
 def _start_ffmpeg_stream_to_mediamtx(camera_id: str, video_path: str):
     """Starts a background ffmpeg process to stream a video file to MediaMTX."""
     if not os.path.exists(video_path):
@@ -82,6 +85,7 @@ def start_streams(loop, camera_config: list):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    global camera_seed_config
     loop = asyncio.get_running_loop()
     init_db()
     await setup_handlers(app) # Pass app instance to setup_handlers
@@ -90,6 +94,22 @@ async def lifespan(app: FastAPI):
     try:
         camera_config_str = os.getenv('CAM_PROXY_CONFIG', '[]')
         camera_config = json.loads(camera_config_str)
+        
+        # Validate and extract seed configuration for each camera
+        for cam in camera_config:
+            camera_id = cam.get("name")
+            if camera_id:
+                # Check if seed configuration is provided
+                if "white_seed" in cam and "black_seed" in cam:
+                    camera_seed_config[camera_id] = {
+                        "white_seed": cam["white_seed"],
+                        "black_seed": cam["black_seed"],
+                        "direction": cam.get("direction", "ltr")
+                    }
+                    logger.info(f"Loaded seed configuration for camera {camera_id}: {camera_seed_config[camera_id]}")
+                else:
+                    logger.warning(f"No seed configuration found for camera {camera_id}. Real-time note mapping will be disabled.")
+                    
     except json.JSONDecodeError:
         logger.error("Error: CAM_PROXY_CONFIG environment variable is not valid JSON")
 
@@ -125,6 +145,10 @@ async def lifespan(app: FastAPI):
                 logger.warning(f"FFmpeg process {process.pid} did not terminate in time, killing it.")
                 process.kill()
         logger.info("All FFmpeg subprocesses terminated.")
+
+def get_camera_seed_config():
+    """Get the global camera seed configuration."""
+    return camera_seed_config
 
 app = FastAPI(root_path="/api", lifespan=lifespan)
 

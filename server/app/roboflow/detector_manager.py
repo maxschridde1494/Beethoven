@@ -42,18 +42,32 @@ class RoboflowDetectorManager:
             stream: FFmpegStream to monitor
             model_ids: Roboflow model IDs
             interval: Seconds between inference runs
+            loop: asyncio event loop
         """
         camera_id = stream.camera_id
         
         if camera_id in self.detectors:
             logger.warning(f"Detector for {camera_id} already exists, stopping old one")
             self.stop_detector(camera_id)
+        
+        # Get seed configuration for this camera
+        try:
+            from app.main import get_camera_seed_config
+            seed_config = get_camera_seed_config().get(camera_id)
+            if seed_config:
+                logger.info(f"Using seed configuration for camera {camera_id}: {seed_config}")
+            else:
+                logger.warning(f"No seed configuration found for camera {camera_id}. Real-time note mapping will be disabled.")
+        except ImportError:
+            logger.warning(f"Could not import seed configuration. Real-time note mapping will be disabled for camera {camera_id}")
+            seed_config = None
             
         detector = RoboflowMultiModelDetector(
             stream=stream,
             model_ids=model_ids,
             interval=interval,
-            loop=loop
+            loop=loop,
+            seed_config=seed_config
         )
         
         detector.start()

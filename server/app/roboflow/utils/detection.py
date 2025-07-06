@@ -70,39 +70,22 @@ def run_initial_inference(run_id: int, camera_config: list):
                 augmented_predictions.append(detection_data)
 
             if camera_id and augmented_predictions is not None:
-                annotated_predictions = annotate_predictions(
-                    augmented_predictions,        # your list of detection dicts
-                    left_white_seed=seed_keys[camera_id]["white"],       # first visible white key = #13
-                    left_black_seed=seed_keys[camera_id]["black"],       # first visible black key = #14
-                    direction=seed_keys[camera_id]["direction"]
-                )
-                initial_predictions[camera_id] = annotated_predictions
+                # Find the camera configuration to get seed values
+                cam_config = next((cam for cam in camera_config if cam.get("name") == camera_id), None)
+                if cam_config and "white_seed" in cam_config and "black_seed" in cam_config:
+                    annotated_predictions = annotate_predictions(
+                        augmented_predictions,
+                        left_white_seed=cam_config["white_seed"],
+                        left_black_seed=cam_config["black_seed"],
+                        direction=cam_config.get("direction", "ltr")
+                    )
+                    initial_predictions[camera_id] = annotated_predictions
+                else:
+                    logger.warning(f"No seed configuration found for camera {camera_id}. Skipping annotation.")
+                    initial_predictions[camera_id] = augmented_predictions
 
     return initial_predictions
 
-# seed_keys = {
-#     "edge-left": {
-#         "white": 9, # [1, 3, 4, 6, 8, 9, 11, 13, 15, 16, 18, 20, 21, 23, 25, 27, 28, 30, 32, 33, 35, 37, 39, 40, 42, 44, 45, 47, 49, 51, 52, 54, 56, 57, 59, 61, 63, 64, 66, 68, 69, 71, 73, 75, 76, 78, 80, 81, 83, 85, 87, 88]
-#         "black": 2   # [2, 5, 7, 10, 12, 14, 17, 19, 22, 24, 26, 29, 31, 34, 36, 38, 41, 43, 46, 48, 50, 53, 55, 58, 60, 62, 65, 67, 70, 72, 74, 77, 79, 82, 84, 86]
-#     },
-#     "middle-left": {
-#         "white": 13, # [1, 3, 4, 6, 8, 9, 11, 13, 15, 16, 18, 20, 21, 23, 25, 27, 28, 30, 32, 33, 35, 37, 39, 40, 42, 44, 45, 47, 49, 51, 52, 54, 56, 57, 59, 61, 63, 64, 66, 68, 69, 71, 73, 75, 76, 78, 80, 81, 83, 85, 87, 88]
-#         "black": 19 # [2, 5, 7, 10, 12, 14, 17, 19, 22, 24, 26, 29, 31, 34, 36, 38, 41, 43, 46, 48, 50, 53, 55, 58, 60, 62, 65, 67, 70, 72, 74, 77, 79, 82, 84, 86]
-#     }
-# }
-
-seed_keys = {
-    "edge-left": {
-        "white": 35,      # lowest visible white in this frame
-        "black": 31,     # lowest visible black
-        "direction": "rtl"
-    },
-    "middle-left": {
-        "white": 56,
-        "black": 50,
-        "direction": "rtl"   # ⬅︎ change to rtl
-    }
-}
 # ────────────────── keyboard metadata ──────────────────
 _NOTE_NAMES: List[str] = (
     "A A# B  "

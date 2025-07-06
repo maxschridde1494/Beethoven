@@ -13,6 +13,7 @@ from uuid import UUID
 from app.utils.logger import get_logger
 from app.utils.signals import detection_made
 from app.roboflow.client import create_client
+from app.roboflow.utils.detection import annotate_predictions
 from app.streams.ffmpeg_stream import FFmpegStream
 from app.utils.benchmark import benchmark
 
@@ -28,6 +29,7 @@ class RoboflowMultiModelDetector:
         model_ids: List[str],
         interval: float = 1.0,
         loop: Optional[asyncio.AbstractEventLoop] = None,
+        seed_config: Optional[Dict] = None,
     ):
         """Initialize the multi-model detector.
         
@@ -36,6 +38,7 @@ class RoboflowMultiModelDetector:
             model_ids: List of Roboflow model IDs (e.g., ["model/1", "model/2"])
             interval: Seconds between inference runs
             loop: asyncio.AbstractEventLoop to use for async operations
+            seed_config: Dictionary containing white_seed, black_seed, and direction for note mapping
         """
         if not model_ids:
             raise ValueError("At least one model ID is required.")
@@ -44,6 +47,7 @@ class RoboflowMultiModelDetector:
         self.model_ids = model_ids
         self.interval = interval
         self.loop = loop
+        self.seed_config = seed_config
 
         if self.loop is None:
             raise ValueError("An asyncio event loop must be provided.")
@@ -106,6 +110,19 @@ class RoboflowMultiModelDetector:
                     
             except Exception as e:
                 logger.error(f"Error processing prediction: {e}\n{prediction}")
+        
+        # Annotate detections with note information if seed config is available
+        if all_detections and self.seed_config:
+            try:
+                all_detections = annotate_predictions(
+                    all_detections,
+                    left_white_seed=self.seed_config["white_seed"],
+                    left_black_seed=self.seed_config["black_seed"],
+                    direction=self.seed_config.get("direction", "ltr")
+                )
+                logger.debug(f"Annotated {len(all_detections)} detections with note information for camera {self.camera_id}")
+            except Exception as e:
+                logger.error(f"Error annotating predictions for camera {self.camera_id}: {e}")
         
         if all_detections:
             await detection_made.send_async(
