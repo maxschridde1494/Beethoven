@@ -17,16 +17,13 @@ services:
       - ROBOFLOW_API_KEY=${ROBOFLOW_API_KEY}
       - ROBOFLOW_INIT_MODEL_ID=${ROBOFLOW_INIT_MODEL_ID}
       - ROBOFLOW_MODEL_ID=${ROBOFLOW_MODEL_ID}
-      - CONFIDENCE_THRESHOLD=${CONFIDENCE_THRESHOLD}
       - INTERVAL=${INTERVAL}
-      - SNAPSHOT_DIR=${SNAPSHOT_DIR}
       - PERSIST_PREDICTIONS=${PERSIST_PREDICTIONS}
       - DATABASE_URL=${DATABASE_URL}
       - DATABASE_ECHO=${DATABASE_ECHO}
       - LOG_LEVEL=${LOG_LEVEL}
     volumes:
       - ./server/app:/app
-      - ./server/snapshots:/app/snapshots
   
   stream-proxy:
     image: bluenviron/mediamtx:latest

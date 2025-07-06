@@ -33,7 +33,6 @@ class RoboflowDetectorManager:
         self,
         stream: FFmpegStream,
         model_ids: List[str],
-        confidence_threshold: float = 0.9,
         interval: float = 1.0,
         loop: Optional[asyncio.AbstractEventLoop] = None,
     ) -> None:
@@ -42,7 +41,6 @@ class RoboflowDetectorManager:
         Args:
             stream: FFmpegStream to monitor
             model_ids: Roboflow model IDs
-            confidence_threshold: Minimum confidence for detections
             interval: Seconds between inference runs
         """
         camera_id = stream.camera_id
@@ -54,14 +52,13 @@ class RoboflowDetectorManager:
         detector = RoboflowMultiModelDetector(
             stream=stream,
             model_ids=model_ids,
-            confidence_threshold=confidence_threshold,
             interval=interval,
             loop=loop
         )
         
         detector.start()
         self.detectors[camera_id] = detector
-        logger.info(f"Detector {camera_id} started! (models: {model_ids}, confidence: {confidence_threshold}, interval: {interval}s)")
+        logger.info(f"Detector {camera_id} started! (models: {model_ids}, interval: {interval}s)")
         
     def stop_detector(self, camera_id: str) -> None:
         """Stop a specific detector."""
