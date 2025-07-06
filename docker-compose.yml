@@ -21,6 +21,9 @@ services:
       - INTERVAL=${INTERVAL}
       - SNAPSHOT_DIR=${SNAPSHOT_DIR}
       - PERSIST_PREDICTIONS=${PERSIST_PREDICTIONS}
+      - DATABASE_URL=${DATABASE_URL}
+      - DATABASE_ECHO=${DATABASE_ECHO}
+      - LOG_LEVEL=${LOG_LEVEL}
     volumes:
       - ./server/app:/app
       - ./server/snapshots:/app/snapshots
