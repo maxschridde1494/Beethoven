@@ -104,6 +104,7 @@ async def lifespan(app: FastAPI):
         logger.info(f"Initial inference complete for cameras: {list(initial_predictions.keys())}")
 
     start_streams(loop, camera_config)
+    
     yield
     
     logger.info("Shutting down application...")

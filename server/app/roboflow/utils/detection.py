@@ -4,7 +4,6 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from typing import Dict, List
 
-from app.db import create_detection
 from app.utils.logger import get_logger
 from app.roboflow.client import create_client
 
@@ -69,8 +68,6 @@ def run_initial_inference(run_id: int, camera_config: list):
                 }
 
                 augmented_predictions.append(detection_data)
-
-                create_detection(run_id, detection_data)
 
             if camera_id and augmented_predictions is not None:
                 annotated_predictions = annotate_predictions(

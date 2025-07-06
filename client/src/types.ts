@@ -18,7 +18,5 @@ export interface Detection {
 export type Snapshot = string;
 
 export interface WebsocketConnectionInit {
-  last_10_detections: Detection[];
-  last_5_snapshots: Snapshot[];
   initial_predictions: {[cameraId: string]: Detection[]};
 }

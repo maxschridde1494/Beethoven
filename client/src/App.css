@@ -8,7 +8,6 @@
 /* Container width standardization */
 .title-container,
 .detection-container,
-.high-confidence-log,
 .carousel,
 .activity-log,
 .log-entries {
@@ -109,16 +108,6 @@
   background: rgba(255, 255, 255, 0.03);
   border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.high-confidence-log {
-  margin-bottom: 1.5rem;
-}
-
-.high-confidence-log h2 {
-  font-size: 1.3rem;
-  margin-bottom: 0.25rem;
-  color: #646cff;
 }
 
 .timestamp-header {

@@ -20,6 +20,7 @@ services:
       - CONFIDENCE_THRESHOLD=${CONFIDENCE_THRESHOLD}
       - INTERVAL=${INTERVAL}
       - SNAPSHOT_DIR=${SNAPSHOT_DIR}
+      - PERSIST_PREDICTIONS=${PERSIST_PREDICTIONS}
     volumes:
       - ./server/app:/app
       - ./server/snapshots:/app/snapshots

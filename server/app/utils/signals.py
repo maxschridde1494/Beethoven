@@ -8,4 +8,3 @@ from blinker import signal
 
 # Detection events
 detection_made = signal('detection.made')
-musical_events_created = signal('music.events_created')

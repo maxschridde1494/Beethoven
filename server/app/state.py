@@ -1,11 +1,9 @@
 """
 State management for the application using FastAPI's application state.
 """
-from typing import Dict, Any, List
+from typing import Dict, List
 from fastapi import FastAPI
-from sqlmodel import Session, select, func
-from app.db import get_session
-from app.models.detection import Detection
+
 from app.utils.logger import get_logger
 
 logger = get_logger(__name__)

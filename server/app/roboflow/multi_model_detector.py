@@ -85,7 +85,6 @@ class RoboflowMultiModelDetector:
         current_time = datetime.now().isoformat()
         
         all_detections = []
-        # high_confidence_detections = []
         
         for prediction in predictions:
             try:
@@ -106,9 +105,6 @@ class RoboflowMultiModelDetector:
                 }
                 
                 all_detections.append(detection_data)
-                
-                # if confidence > self.confidence_threshold:
-                #     high_confidence_detections.append(detection_data)
                     
             except Exception as e:
                 logger.error(f"Error processing prediction: {e}\n{prediction}")
