@@ -7,7 +7,7 @@ from app.utils.logger import get_logger
 logger = get_logger(__name__)
 
 # Load configuration from environment variables
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+psycopg2://postgres:postgres@db:5432/beethoven")
+DATABASE_URL = os.getenv("DATABASE_URL")
 DATABASE_ECHO = os.getenv("DATABASE_ECHO", "false").lower() == "true"
 
 engine = create_engine(DATABASE_URL, echo=DATABASE_ECHO)
