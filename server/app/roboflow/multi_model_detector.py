@@ -8,6 +8,7 @@ from datetime import datetime
 from typing import Dict, Optional, List
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
+from uuid import UUID
 
 from app.utils.logger import get_logger
 from app.utils.signals import detection_made
@@ -82,7 +83,7 @@ class RoboflowMultiModelDetector:
 
     async def _process_predictions(self, predictions: List[dict], frame) -> None:
         """Process a list of predictions and emit appropriate signals."""
-        current_time = datetime.now().isoformat()
+        current_time = datetime.now()
         
         all_detections = []
         
@@ -91,7 +92,7 @@ class RoboflowMultiModelDetector:
                 confidence = prediction["confidence"]
                 
                 detection_data = {
-                    "detection_id": prediction["detection_id"],
+                    "detection_id": UUID(prediction["detection_id"]),
                     "timestamp": current_time,
                     "model_id": self.model_ids[0],
                     "camera_id": self.camera_id,
