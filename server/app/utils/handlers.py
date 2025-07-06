@@ -43,8 +43,8 @@ async def setup_handlers(app: FastAPI):
     logger.info("Signal handlers connected.")
     from app.utils.signals import detection_made
 
-    if os.getenv("PERSIST_PREDICTIONS") == "true":
+    if os.getenv("DATABASE_PERSIST_DETECTIONS") == "true":
         # Connect handlers to signals
         detection_made.connect(handle_detections_storage)
     else:
-        logger.info("PERSIST_PREDICTIONS is not set, skipping detection storage.")
+        logger.info("DATABASE_PERSIST_DETECTIONS is not set, skipping detection storage.")

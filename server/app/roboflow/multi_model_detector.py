@@ -26,7 +26,6 @@ class RoboflowMultiModelDetector:
         self,
         stream: FFmpegStream,
         model_ids: List[str],
-        confidence_threshold: float = 0.9,
         interval: float = 1.0,
         loop: Optional[asyncio.AbstractEventLoop] = None,
     ):
@@ -35,7 +34,6 @@ class RoboflowMultiModelDetector:
         Args:
             stream: FFmpegStream to monitor
             model_ids: List of Roboflow model IDs (e.g., ["model/1", "model/2"])
-            confidence_threshold: Minimum confidence for detections
             interval: Seconds between inference runs
             loop: asyncio.AbstractEventLoop to use for async operations
         """
@@ -44,7 +42,6 @@ class RoboflowMultiModelDetector:
 
         self.stream = stream
         self.model_ids = model_ids
-        self.confidence_threshold = confidence_threshold
         self.interval = interval
         self.loop = loop
 

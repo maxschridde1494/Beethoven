@@ -55,11 +55,9 @@ def start_streams(loop, camera_config: list):
     # Get singleton managers
     stream_manager = StreamManager()
     detector_manager = RoboflowDetectorManager()
-    confidence_threshold = float(os.getenv("CONFIDENCE_THRESHOLD", "0.9"))
     model_ids_str = os.getenv("ROBOFLOW_MODEL_ID", "")
     model_ids = [model_id.strip() for model_id in model_ids_str.split(',') if model_id.strip()]
 
-    logger.info(f"Confidence threshold: {confidence_threshold} (env: {os.getenv('CONFIDENCE_THRESHOLD')})")
     logger.info(f"Roboflow Model IDs: {model_ids}")
 
 
@@ -78,7 +76,6 @@ def start_streams(loop, camera_config: list):
             detector_manager.add_detector(
                 stream=stream,
                 model_ids=model_ids,
-                confidence_threshold=confidence_threshold,
                 interval=float(os.getenv("INTERVAL", 1.0)),
                 loop=loop
             )
@@ -145,11 +142,4 @@ app.include_router(websocket_router)
 @app.get("/")
 def root():
     return {"status": "Pet Tracker API is running"}
-
-SNAPSHOT_DIR = os.getenv("SNAPSHOT_DIR", "app/snapshots")
-app.mount(
-    "/assets",
-    StaticFiles(directory="app/assets"),
-    name="assets",
-)
 

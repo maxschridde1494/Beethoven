@@ -1,3 +1,4 @@
+import os
 from sqlmodel import SQLModel, Session, create_engine, select
 from uuid import UUID
 from app.models.detection import Detection
@@ -5,8 +6,11 @@ from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
-DATABASE_URL = "postgresql+psycopg2://postgres:postgres@db:5432/beethoven"
-engine = create_engine(DATABASE_URL, echo=True)
+# Load configuration from environment variables
+DATABASE_URL = os.getenv("DATABASE_URL")
+DATABASE_ECHO = os.getenv("DATABASE_ECHO", "false").lower() == "true"
+
+engine = create_engine(DATABASE_URL, echo=DATABASE_ECHO)
 
 def init_db():
     SQLModel.metadata.create_all(engine)
