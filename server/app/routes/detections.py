@@ -1,9 +1,10 @@
 # app/routers/detections.py
 from fastapi import APIRouter, Depends
-from sqlmodel import Session, select
+from sqlmodel import Session
 
 from app.models.detection import Detection
 from app.db import get_session as open_session   # sync helper from db.py
+from app.utils.detection_utils import get_recent_detections
 
 router = APIRouter(prefix="", tags=["Detections"])
 
@@ -12,6 +13,7 @@ def get_db() -> Session:
     """FastAPI dependency that yields a synchronous DB session."""
     with open_session() as session:
         yield session
+
 
 
 # ───────── endpoints ───────────────────────────────────────────────────────
@@ -27,7 +29,6 @@ def create_detection(
 
 
 @router.get("/detections", response_model=list[Detection])
-def list_detections(session: Session = Depends(get_db)):
-    result = session.execute(select(Detection).order_by(Detection.timestamp.desc()).limit(10))
-    # result = session.execute(select(Detection))
-    return result.scalars().all()
+def list_detections():
+    """List recent detections using the same logic as WebSocket for consistency."""
+    return get_recent_detections()
