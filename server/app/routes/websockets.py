@@ -1,4 +1,4 @@
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Request
 import asyncio
 from typing import Set
 from datetime import datetime
@@ -25,7 +25,7 @@ async def broadcast_to_clients(clients: Set[WebSocket], data: dict):
         except Exception as e:
             logger.error(f"{type(e)} error sending data to client: {e}")
 
-async def get_initial_data():
+async def get_initial_data(websocket: WebSocket):
     """Get the initial data for a new websocket connection."""
     # Get last 10 detections
     with get_session() as session:
@@ -58,7 +58,7 @@ async def get_initial_data():
     return {
         "last_10_detections": detections_data,
         # "last_5_snapshots": snapshots,
-        "initial_predictions": get_initial_predictions(),
+        "initial_predictions": get_initial_predictions(websocket.app),
     }
 
 @router.websocket("/ws")
@@ -69,7 +69,7 @@ async def websocket_endpoint(websocket: WebSocket):
     logger.info(f"New client connected: {websocket}")
     
     # Send initial data
-    initial_data = await get_initial_data()
+    initial_data = await get_initial_data(websocket)
     await websocket.send_json({
         "timestamp": datetime.now().isoformat(),
         "status": "connected",

@@ -1,7 +1,8 @@
 """
-Global state for the application.
+State management for the application using FastAPI's application state.
 """
 from typing import Dict, Any, List
+from fastapi import FastAPI
 from sqlmodel import Session, select, func
 from app.db import get_session
 from app.models.detection import Detection
@@ -9,22 +10,18 @@ from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
-# This dictionary will hold the application's global state.
-# For example, it can store initialization results or other shared data.
-app_state: Dict[str, Any] = {
-    "initial_predictions": {},
-}
+def set_initial_predictions(app: FastAPI, predictions: Dict[str, List[dict]]):
+    """Sets the initial predictions in the application state, keyed by camera_id."""
+    app.state.initial_predictions = predictions
 
-def set_initial_predictions(predictions: Dict[str, List[dict]]):
-    """Sets the initial predictions in the global state, keyed by camera_id."""
-    app_state["initial_predictions"] = predictions
+def get_initial_predictions(app: FastAPI) -> Dict[str, List[dict]]:
+    """Gets the initial predictions from the application state."""
+    return getattr(app.state, 'initial_predictions', {})
 
-def get_initial_predictions() -> Dict[str, List[dict]]:
-    """Gets the initial predictions from the global state."""
-    return app_state.get("initial_predictions", {})
+def get_run_id(app: FastAPI) -> int:
+    """Gets the current run ID from the application state."""
+    return getattr(app.state, 'run_id', 0)
 
-def get_run_id() -> int:
-    return app_state.get("run_id", 0)
-
-def set_run_id(run_id: int):
-    app_state["run_id"] = run_id
+def set_run_id(app: FastAPI, run_id: int):
+    """Sets the current run ID in the application state."""
+    app.state.run_id = run_id
