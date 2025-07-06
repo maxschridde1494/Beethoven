@@ -85,7 +85,7 @@ def start_streams(loop, camera_config: list):
 async def lifespan(app: FastAPI):
     loop = asyncio.get_running_loop()
     init_db()
-    await setup_handlers() # Initialize signal handlers before starting streams
+    await setup_handlers(app) # Pass app instance to setup_handlers
     
     camera_config = []
     try:
@@ -95,10 +95,10 @@ async def lifespan(app: FastAPI):
         logger.error("Error: CAM_PROXY_CONFIG environment variable is not valid JSON")
 
     run_id = get_next_run_id()
-    set_run_id(run_id)
+    set_run_id(app, run_id)  # Pass app instance to set_run_id
     initial_predictions = run_initial_inference(run_id, camera_config)
     if initial_predictions:
-        set_initial_predictions(initial_predictions)
+        set_initial_predictions(app, initial_predictions)  # Pass app instance to set_initial_predictions
         logger.info(f"Initial inference complete for cameras: {list(initial_predictions.keys())}")
 
     start_streams(loop, camera_config)
