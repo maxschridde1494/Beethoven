@@ -19,6 +19,7 @@ from app.roboflow.utils.detection import run_initial_inference
 load_dotenv()
 
 logger = get_logger(__name__)
+ffmpeg_processes = []
 
 def _start_ffmpeg_stream_to_mediamtx(camera_id: str, video_path: str):
     """Starts a background ffmpeg process to stream a video file to MediaMTX."""
@@ -39,7 +40,8 @@ def _start_ffmpeg_stream_to_mediamtx(camera_id: str, video_path: str):
     ]
     logger.info(f"Starting ffmpeg stream for {camera_id} from {video_path} to {rtsp_url}")
     # Run ffmpeg in the background, ignoring its output
-    subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    process = subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    ffmpeg_processes.append(process)
 
 def start_streams(loop, camera_config: list):
     """Initialize and start RTSP streams and detectors."""
@@ -103,6 +105,28 @@ async def lifespan(app: FastAPI):
 
     start_streams(loop, camera_config)
     yield
+    
+    logger.info("Shutting down application...")
+
+    # Stop detector and stream managers
+    RoboflowDetectorManager().stop_all()
+    StreamManager().stop_all()
+    logger.info("Detector and stream managers stopped.")
+
+    # Terminate all FFmpeg subprocesses
+    if ffmpeg_processes:
+        logger.info(f"Terminating {len(ffmpeg_processes)} FFmpeg subprocess(es)...")
+        for process in ffmpeg_processes:
+            process.terminate()
+        
+        # Wait for all processes to terminate
+        for process in ffmpeg_processes:
+            try:
+                process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                logger.warning(f"FFmpeg process {process.pid} did not terminate in time, killing it.")
+                process.kill()
+        logger.info("All FFmpeg subprocesses terminated.")
 
 app = FastAPI(root_path="/api", lifespan=lifespan)
 
