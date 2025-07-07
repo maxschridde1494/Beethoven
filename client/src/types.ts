@@ -15,5 +15,5 @@ export interface Detection {
   note_name?: string;
 }
 export interface WebsocketConnectionInit {
-  initial_predictions: {[cameraId: string]: Detection[]};
+  relative_positions: {[cameraId: string]: Detection[]};
 }

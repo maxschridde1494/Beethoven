@@ -2,13 +2,13 @@ import React, { useRef, useState, useEffect } from 'react';
 import type { Detection } from '../../types';
 import BoundingBox from '../BoundingBox';
 
-interface InitialPredictionProps {
+interface RelativePositionProps {
     cameraId: string;
-    predictions: Detection[];
+    positions: Detection[];
 }
 
-const sortPredictions = (predictions: Detection[]) => {
-    return [...predictions].sort((a, b) => {
+const sortPositions = (positions: Detection[]) => {
+    return [...positions].sort((a, b) => {
         const classA = a.class_name.toLowerCase();
         const classB = b.class_name.toLowerCase();
         if (classA === 'bl' && classB !== 'bl') return 1;
@@ -17,7 +17,7 @@ const sortPredictions = (predictions: Detection[]) => {
     });
 }
 
-const InitialPrediction: React.FC<InitialPredictionProps> = ({ cameraId, predictions }) => {
+const RelativePosition: React.FC<RelativePositionProps> = ({ cameraId, positions }) => {
     const imageRef = useRef<HTMLImageElement>(null);
     const [imageSize, setImageSize] = useState({ width: 0, height: 0, naturalWidth: 1, naturalHeight: 1 });
     const imageUrl = `http://localhost:8000/api/assets/${cameraId}-static.jpg`;
@@ -36,7 +36,7 @@ const InitialPrediction: React.FC<InitialPredictionProps> = ({ cameraId, predict
 
     const scaleX = imageSize.width / imageSize.naturalWidth;
     const scaleY = imageSize.height / imageSize.naturalHeight;
-    const sortedPredictions = sortPredictions(predictions);
+    const sortedPositions = sortPositions(positions);
 
     return (
         <div style={{ marginBottom: '20px', flexShrink: 0 }}>
@@ -48,7 +48,7 @@ const InitialPrediction: React.FC<InitialPredictionProps> = ({ cameraId, predict
                     style={{ height: '400px', width: 'auto' }}
                     onLoad={handleImageLoad}
                 />
-                {sortedPredictions.map(p => (
+                {sortedPositions.map(p => (
                     <BoundingBox
                         key={p.detection_id}
                         x={p.x}
@@ -69,4 +69,4 @@ const InitialPrediction: React.FC<InitialPredictionProps> = ({ cameraId, predict
     );
 };
 
-export default InitialPrediction; 
+export default RelativePosition; 

@@ -4,6 +4,8 @@ Singleton manager for Roboflow detectors.
 
 from typing import Dict, List, Optional
 import asyncio
+from fastapi import FastAPI
+
 from app.streams.ffmpeg_stream import FFmpegStream
 from app.roboflow.multi_model_detector import RoboflowMultiModelDetector
 from app.utils.logger import get_logger
@@ -16,16 +18,17 @@ class RoboflowDetectorManager:
     
     _instance = None
     
-    def __new__(cls):
+    def __new__(cls, app: FastAPI):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
             cls._instance._initialized = False
         return cls._instance
         
-    def __init__(self):
+    def __init__(self, app: FastAPI):
         if self._initialized:
             return
-            
+        
+        self.app = app
         self.detectors: Dict[str, RoboflowMultiModelDetector] = {}
         self._initialized = True
         
@@ -49,25 +52,13 @@ class RoboflowDetectorManager:
         if camera_id in self.detectors:
             logger.warning(f"Detector for {camera_id} already exists, stopping old one")
             self.stop_detector(camera_id)
-        
-        # Get seed configuration for this camera
-        try:
-            from app.main import get_camera_seed_config
-            seed_config = get_camera_seed_config().get(camera_id)
-            if seed_config:
-                logger.info(f"Using seed configuration for camera {camera_id}: {seed_config}")
-            else:
-                logger.warning(f"No seed configuration found for camera {camera_id}. Real-time note mapping will be disabled.")
-        except ImportError:
-            logger.warning(f"Could not import seed configuration. Real-time note mapping will be disabled for camera {camera_id}")
-            seed_config = None
             
         detector = RoboflowMultiModelDetector(
+            app=self.app,
             stream=stream,
             model_ids=model_ids,
             interval=interval,
             loop=loop,
-            seed_config=seed_config
         )
         
         detector.start()

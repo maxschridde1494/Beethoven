@@ -8,13 +8,13 @@ from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
-def set_initial_predictions(app: FastAPI, predictions: Dict[str, List[dict]]):
-    """Sets the initial predictions in the application state, keyed by camera_id."""
-    app.state.initial_predictions = predictions
+def set_relative_positions(app: FastAPI, predictions: Dict[str, List[dict]]):
+    """Sets the relative positions in the application state, keyed by camera_id."""
+    app.state.relative_positions = predictions
 
-def get_initial_predictions(app: FastAPI) -> Dict[str, List[dict]]:
-    """Gets the initial predictions from the application state."""
-    return getattr(app.state, 'initial_predictions', {})
+def get_relative_positions(app: FastAPI) -> Dict[str, List[dict]]:
+    """Gets the relative positions from the application state."""
+    return getattr(app.state, 'relative_positions', {})
 
 def get_run_id(app: FastAPI) -> int:
     """Gets the current run ID from the application state."""
