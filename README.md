@@ -10,6 +10,11 @@
 
 At its core, Beethoven leverages **Roboflow** object-detection models to run inference on video frames. Two models are used: one model calibrates the layout of the keyboard (finding all keys in the frame), and another model identifies when keys are pressed. By combining these, the system can map physical key presses to specific piano notes. The application is built with a modern web tech stack: a Python **FastAPI** server (for running inference and coordinating data) and a React frontend (for live visualization). These components communicate via WebSockets to stream detection results instantly to the browser. The entire setup runs in Docker containers for easy deployment and consistency across environments.
 
+## Roboflow Universe
+
+*   [**Beethoven - Keys Pressed**](https://universe.roboflow.com/mjs-personal/beethoven-keys-pressed)
+*   [**Beethoven - Relative Position**](https://universe.roboflow.com/mjs-personal/beethoven-relative-position)
+
 ## Documentation
 
 *   [**Setup and Requirements**](./docs/setup.md)
