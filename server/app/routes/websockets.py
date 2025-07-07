@@ -5,9 +5,8 @@ from typing import Set
 from datetime import datetime
 
 from app.utils.logger import get_logger
-from app.state import get_initial_predictions
+from app.state import get_relative_positions
 from app.utils.detection_utils import (
-    get_recent_detections,
     serialize_detections,
     create_detection_objects_from_data
 )
@@ -33,7 +32,7 @@ async def broadcast_to_clients(clients: Set[WebSocket], data: dict):
 async def get_initial_data(websocket: WebSocket):
     """Get the initial data for a new websocket connection."""
     return {
-        "initial_predictions": get_initial_predictions(websocket.app),
+        "relative_positions": get_relative_positions(websocket.app),
     }
 
 @router.websocket("/ws")

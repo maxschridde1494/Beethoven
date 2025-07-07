@@ -9,12 +9,15 @@ from typing import Dict, Optional, List
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from uuid import UUID
+from fastapi import FastAPI
 
 from app.utils.logger import get_logger
 from app.utils.signals import detection_made
 from app.roboflow.client import create_client
+from app.roboflow.utils.key_pressed import annotate_predictions
 from app.streams.ffmpeg_stream import FFmpegStream
 from app.utils.benchmark import benchmark
+from app.state import get_relative_positions
 
 logger = get_logger(__name__)
 
@@ -24,6 +27,7 @@ class RoboflowMultiModelDetector:
 
     def __init__(
         self,
+        app: FastAPI,
         stream: FFmpegStream,
         model_ids: List[str],
         interval: float = 1.0,
@@ -32,6 +36,7 @@ class RoboflowMultiModelDetector:
         """Initialize the multi-model detector.
         
         Args:
+            app: FastAPI instance
             stream: FFmpegStream to monitor
             model_ids: List of Roboflow model IDs (e.g., ["model/1", "model/2"])
             interval: Seconds between inference runs
@@ -40,6 +45,7 @@ class RoboflowMultiModelDetector:
         if not model_ids:
             raise ValueError("At least one model ID is required.")
 
+        self.app = app
         self.stream = stream
         self.model_ids = model_ids
         self.interval = interval
@@ -55,6 +61,8 @@ class RoboflowMultiModelDetector:
         
         # Set camera_id as an attribute for signal handlers
         self.camera_id = stream.camera_id
+        self.relative_positions = get_relative_positions(app)[self.camera_id]
+
 
     def start(self) -> None:
         """Start the detector thread."""
@@ -99,13 +107,26 @@ class RoboflowMultiModelDetector:
                     "height": prediction["height"],
                     "confidence": confidence,
                     "class_name": prediction["class"],
-                    "class_id": prediction["class_id"]
+                    "class_id": prediction["class_id"],
+                    "key_number": None,
+                    "note_name": None
                 }
                 
                 all_detections.append(detection_data)
                     
             except Exception as e:
                 logger.error(f"Error processing prediction: {e}\n{prediction}")
+        
+        # Annotate detections with note information
+        if all_detections:
+            try:
+                all_detections = annotate_predictions(
+                    all_detections,
+                    self.relative_positions
+                )
+                logger.debug(f"Annotated {len(all_detections)} detections with note information for camera {self.camera_id}")
+            except Exception as e:
+                logger.error(f"Error annotating predictions for camera {self.camera_id}: {e}")
         
         if all_detections:
             await detection_made.send_async(

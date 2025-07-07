@@ -9,37 +9,37 @@ from app.roboflow.client import create_client
 
 logger = get_logger(__name__)
 
-def run_initial_inference(run_id: int, camera_config: list):
+def infer_relative_positions(run_id: int, camera_config: list):
     """Runs inference on a static image for each camera at startup."""
-    init_model_id = os.getenv("ROBOFLOW_INIT_MODEL_ID")
-    if not init_model_id:
-        logger.info("No initial model ID provided, skipping initial inference.")
+    rf_model_id = os.getenv("ROBOFLOW_RELATIVE_POSITION_MODEL_ID")
+    if not rf_model_id:
+        logger.info("No relative position model ID provided, skipping relative position inference.")
         return
 
     client = create_client()
-    initial_predictions = {}
+    relative_positions = {}
 
     def _infer(cam_config):
-        image_path = cam_config.get("initialization-img-path")
+        image_path = cam_config.get("relative-position-img-path")
         camera_id = cam_config.get("name")
         if not image_path or not camera_id:
             return None, None
         
         if not os.path.exists(image_path):
-            logger.error(f"Initial image not found at {image_path}")
+            logger.error(f"Relative position image not found at {image_path}")
             return camera_id, None
 
         try:
             image = cv2.imread(image_path)
-            predictions = client.infer(image, model_id=init_model_id)
+            predictions = client.infer(image, model_id=rf_model_id)
             if predictions and "predictions" in predictions:
-                logger.info(f"Initial inference for {camera_id} got {len(predictions['predictions'])} predictions.")
+                logger.info(f"Relative position inference for {camera_id} got {len(predictions['predictions'])} predictions.")
                 return camera_id, predictions["predictions"]
             else:
-                logger.info(f"Initial inference for {camera_id} ran but returned no predictions.")
+                logger.info(f"Relative position inference for {camera_id} ran but returned no predictions.")
                 return camera_id, []
         except Exception as e:
-            logger.error(f"Error during initial inference for {camera_id}: {e}")
+            logger.error(f"Error during relative position inference for {camera_id}: {e}")
             return camera_id, None
 
     with ThreadPoolExecutor() as executor:
@@ -55,7 +55,7 @@ def run_initial_inference(run_id: int, camera_config: list):
                 detection_data = {
                     "detection_id": str(prediction["detection_id"]),
                     "timestamp": current_time,
-                    "model_id": init_model_id,
+                    "model_id": rf_model_id,
                     "camera_id": camera_id,
                     "x": prediction["x"],
                     "y": prediction["y"],
@@ -70,15 +70,21 @@ def run_initial_inference(run_id: int, camera_config: list):
                 augmented_predictions.append(detection_data)
 
             if camera_id and augmented_predictions is not None:
-                annotated_predictions = annotate_predictions(
-                    augmented_predictions,        # your list of detection dicts
-                    left_white_seed=seed_keys[camera_id]["white"],       # first visible white key = #13
-                    left_black_seed=seed_keys[camera_id]["black"],       # first visible black key = #14
-                    direction=seed_keys[camera_id]["direction"]
-                )
-                initial_predictions[camera_id] = annotated_predictions
+                # Find the camera configuration to get seed values
+                cam_config = next((cam for cam in camera_config if cam.get("name") == camera_id), None)
+                if cam_config and "white_edge_seed" in cam_config and "black_edge_seed" in cam_config:
+                    annotated = annotate_relative_positions(
+                        augmented_predictions,
+                        left_white_edge_seed=cam_config["white_edge_seed"],
+                        left_black_edge_seed=cam_config["black_edge_seed"],
+                        direction=cam_config.get("direction", "ltr")
+                    )
+                    relative_positions[camera_id] = annotated
+                else:
+                    logger.warning(f"No seed configuration found for camera {camera_id}. Skipping annotation.")
+                    relative_positions[camera_id] = augmented_predictions
 
-    return initial_predictions
+    return relative_positions
 
 # seed_keys = {
 #     "edge-left": {
@@ -91,18 +97,6 @@ def run_initial_inference(run_id: int, camera_config: list):
 #     }
 # }
 
-seed_keys = {
-    "edge-left": {
-        "white": 35,      # lowest visible white in this frame
-        "black": 31,     # lowest visible black
-        "direction": "rtl"
-    },
-    "middle-left": {
-        "white": 56,
-        "black": 50,
-        "direction": "rtl"   # ⬅︎ change to rtl
-    }
-}
 # ────────────────── keyboard metadata ──────────────────
 _NOTE_NAMES: List[str] = (
     "A A# B  "
@@ -153,11 +147,11 @@ def _slice_from(
         return slice_rev[:needed]
 
 # ────────────────── core routine ───────────────────────
-def annotate_predictions(
+def annotate_relative_positions(
     preds: List[Dict],
     *,
-    left_white_seed: int,
-    left_black_seed: int,
+    left_white_edge_seed: int,
+    left_black_edge_seed: int,
     direction: str = "ltr",        # "ltr" or "rtl"
 ) -> List[Dict]:
     """
@@ -167,9 +161,9 @@ def annotate_predictions(
     ----------
     preds : list[dict]
         Each dict must have keys 'x' and 'class_name' ("wh" or "bl").
-    left_white_seed : int
+    left_white_edge_seed : int
         Absolute piano key of the **left-most white** detection in view.
-    left_black_seed : int
+    left_black_edge_seed : int
         Absolute piano key of the **left-most black** detection in view.
     direction : str
         "ltr" → numbers increase as x increases (normal keyboard photo).  
@@ -188,8 +182,12 @@ def annotate_predictions(
     whites = sorted((p for p in preds if p["class_name"] == "wh"), key=lambda d: d["x"])
     blacks = sorted((p for p in preds if p["class_name"] == "bl"), key=lambda d: d["x"])
 
-    white_seq = _slice_from(left_white_seed, WHITE_KEYS, len(whites), forward)
-    black_seq = _slice_from(left_black_seed, BLACK_KEYS, len(blacks), forward)
+    # If there are no white keys, we can't determine the notes
+    if not whites:
+        raise ValueError("No white keys found in predictions")
+
+    white_seq = _slice_from(left_white_edge_seed, WHITE_KEYS, len(whites), forward)
+    black_seq = _slice_from(left_black_edge_seed, BLACK_KEYS, len(blacks), forward)
 
     for det, k in zip(whites, white_seq):
         det["key_number"] = k

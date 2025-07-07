@@ -1,7 +1,6 @@
 import os, json, subprocess
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 from contextlib import asynccontextmanager
 import asyncio
@@ -13,8 +12,8 @@ from app.streams.ffmpeg_stream import StreamManager
 from app.roboflow.detector_manager import RoboflowDetectorManager
 from app.utils.handlers import setup_handlers
 from app.utils.logger import get_logger
-from app.state import set_run_id, set_initial_predictions
-from app.roboflow.utils.detection import run_initial_inference
+from app.state import set_run_id, set_relative_positions
+from app.roboflow.utils.relative_position import infer_relative_positions
 
 load_dotenv()
 
@@ -43,7 +42,7 @@ def _start_ffmpeg_stream_to_mediamtx(camera_id: str, video_path: str):
     process = subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     ffmpeg_processes.append(process)
 
-def start_streams(loop, camera_config: list):
+def start_streams(app: FastAPI,loop, camera_config: list):
     """Initialize and start RTSP streams and detectors."""
     camera_feeds = {}
 
@@ -54,7 +53,7 @@ def start_streams(loop, camera_config: list):
 
     # Get singleton managers
     stream_manager = StreamManager()
-    detector_manager = RoboflowDetectorManager()
+    detector_manager = RoboflowDetectorManager(app)
     model_ids_str = os.getenv("ROBOFLOW_MODEL_ID", "")
     model_ids = [model_id.strip() for model_id in model_ids_str.split(',') if model_id.strip()]
 
@@ -90,24 +89,25 @@ async def lifespan(app: FastAPI):
     try:
         camera_config_str = os.getenv('CAM_PROXY_CONFIG', '[]')
         camera_config = json.loads(camera_config_str)
+        
     except json.JSONDecodeError:
         logger.error("Error: CAM_PROXY_CONFIG environment variable is not valid JSON")
 
     run_id = get_next_run_id()
     set_run_id(app, run_id)  # Pass app instance to set_run_id
-    initial_predictions = run_initial_inference(run_id, camera_config)
-    if initial_predictions:
-        set_initial_predictions(app, initial_predictions)  # Pass app instance to set_initial_predictions
-        logger.info(f"Initial inference complete for cameras: {list(initial_predictions.keys())}")
+    relative_positions = infer_relative_positions(run_id, camera_config)
+    if relative_positions:
+        set_relative_positions(app, relative_positions)  # Pass app instance to set_relative_positions
+        logger.info(f"Relative positions inference complete for cameras: {list(relative_positions.keys())}")
 
-    start_streams(loop, camera_config)
+    start_streams(app, loop, camera_config)
     
     yield
     
     logger.info("Shutting down application...")
 
     # Stop detector and stream managers
-    RoboflowDetectorManager().stop_all()
+    RoboflowDetectorManager(app).stop_all()
     StreamManager().stop_all()
     logger.info("Detector and stream managers stopped.")
 

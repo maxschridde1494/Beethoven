@@ -4,6 +4,8 @@ Singleton manager for Roboflow detectors.
 
 from typing import Dict, List, Optional
 import asyncio
+from fastapi import FastAPI
+
 from app.streams.ffmpeg_stream import FFmpegStream
 from app.roboflow.multi_model_detector import RoboflowMultiModelDetector
 from app.utils.logger import get_logger
@@ -16,16 +18,17 @@ class RoboflowDetectorManager:
     
     _instance = None
     
-    def __new__(cls):
+    def __new__(cls, app: FastAPI):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
             cls._instance._initialized = False
         return cls._instance
         
-    def __init__(self):
+    def __init__(self, app: FastAPI):
         if self._initialized:
             return
-            
+        
+        self.app = app
         self.detectors: Dict[str, RoboflowMultiModelDetector] = {}
         self._initialized = True
         
@@ -42,6 +45,7 @@ class RoboflowDetectorManager:
             stream: FFmpegStream to monitor
             model_ids: Roboflow model IDs
             interval: Seconds between inference runs
+            loop: asyncio event loop
         """
         camera_id = stream.camera_id
         
@@ -50,10 +54,11 @@ class RoboflowDetectorManager:
             self.stop_detector(camera_id)
             
         detector = RoboflowMultiModelDetector(
+            app=self.app,
             stream=stream,
             model_ids=model_ids,
             interval=interval,
-            loop=loop
+            loop=loop,
         )
         
         detector.start()

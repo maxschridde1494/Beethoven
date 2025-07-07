@@ -1,11 +1,11 @@
 import './App.css'
 import { LiveRtspPlayer } from './components/LiveRtspPlayer'
 import { useRealTime } from './hooks/useRealTime';
-import InitialPredictions from './components/InitialPredictions';
+import RelativePositions from './components/RelativePositions';
 import type { Detection } from './types';
 
 function App() {
-  const { initialPredictions, isLoading } = useRealTime('ws://localhost:8000/ws');
+  const { relativePositions, isLoading } = useRealTime('ws://localhost:8000/ws');
 
   if (isLoading) {
     return <div>Loading...</div>;
@@ -15,7 +15,7 @@ function App() {
     <div>
       <h1>Beethoven</h1>
       <div>
-        <InitialPredictions predictions={initialPredictions as unknown as { [key: string]: Detection[] }} />
+        <RelativePositions positions={relativePositions as unknown as { [key: string]: Detection[] }} />
       </div>
       <div style={{ display: 'flex', flexDirection: 'row', gap: '10px' }}>
         <LiveRtspPlayer

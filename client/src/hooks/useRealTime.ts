@@ -8,7 +8,7 @@ enum RealTimeMessage {
 
 export const useRealTime = (url: string) => {
   const [isLoading, setIsLoading] = useState(true);
-  const [initialPredictions, setInitialPredictions] = useState<{[cameraId: string]: Detection[]}>({});
+  const [relativePositions, setRelativePositions] = useState<{[cameraId: string]: Detection[]}>({});
 
   useEffect(() => {
     const socket = new WebSocket(url);
@@ -23,7 +23,7 @@ export const useRealTime = (url: string) => {
 
       if (message === RealTimeMessage.ConnectionMade) {
         const initData = data as WebsocketConnectionInit;
-        setInitialPredictions(initData.initial_predictions);
+        setRelativePositions(initData.relative_positions);
         setIsLoading(false);
       } else if (message === RealTimeMessage.DetectionMade) {
         console.log('DetectionMade', data);
@@ -37,6 +37,6 @@ export const useRealTime = (url: string) => {
 
   return { 
     isLoading, 
-    initialPredictions 
+    relativePositions 
   };
 };
