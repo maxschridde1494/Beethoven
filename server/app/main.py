@@ -1,6 +1,7 @@
 import os, json, subprocess
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 from contextlib import asynccontextmanager
 import asyncio
@@ -143,3 +144,8 @@ app.include_router(websocket_router)
 def root():
     return {"status": "Pet Tracker API is running"}
 
+app.mount(
+    "/assets",
+    StaticFiles(directory="app/assets"),
+    name="assets",
+)

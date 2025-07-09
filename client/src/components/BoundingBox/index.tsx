@@ -56,7 +56,9 @@ const BoundingBox: React.FC<BoundingBoxProps> = ({ x, y, width, height, classNam
             <div>
                 <div>{note_name}</div>
                 <div>{key_number}</div>
-                <div>{isHovered ? `${(confidence * 100).toFixed(0)}%` : className}</div>
+                <div>{className}</div>
+                <div>{(confidence * 100).toFixed(0)}%</div>
+                {/* <div>{isHovered ? `${(confidence * 100).toFixed(0)}%` : className}</div> */}
             </div>
         </div>
     );
