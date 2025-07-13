@@ -8,3 +8,4 @@ inference-sdk
 blinker
 psycopg2-binary
 websockets
+music21

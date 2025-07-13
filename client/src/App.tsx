@@ -1,13 +1,23 @@
 import './App.css'
-import ColorKey from './components/ColorKey'
+// import ColorKey from './components/ColorKey'
 import { LiveRtspPlayer } from './components/LiveRtspPlayer'
-import { CLASS_COLORS } from './utils/colorUtils'
+// import { CLASS_COLORS } from './utils/colorUtils'
 import { useRealTime } from './hooks/useRealTime';
-import RelativePositions from './components/RelativePositions';
-import type { Detection } from './types';
+// import RelativePositions from './components/RelativePositions';
+// import type { Detection } from './types';
+import { Score } from './components/Score';
 
 function App() {
-  const { relativePositions, isLoading } = useRealTime('ws://localhost:8000/ws');
+  const { 
+    // relativePositions, 
+    activeNotes,
+    recentTranscriptions,
+    transcriptionStats,
+    musicXML,
+    isLoading 
+  } = useRealTime('ws://localhost:8000/ws');
+
+  console.log(activeNotes, recentTranscriptions, transcriptionStats, musicXML, isLoading);
 
   // if (isLoading) {
   //   return <div>Loading...</div>;
@@ -16,10 +26,10 @@ function App() {
   return (
     <div>
       <h1 style={{ margin: 0, padding: 0 }}>Beethoven</h1>
-      <div style={{ paddingBottom: '10px', width: '20%' }}>
+      {/* <div style={{ paddingBottom: '10px', width: '20%' }}>
         <RelativePositions positions={relativePositions as unknown as { [key: string]: Detection[] }} />
         <ColorKey colorMap={CLASS_COLORS} />
-      </div>
+      </div> */}
       <div style={{ display: 'flex', flexDirection: 'row', gap: '10px' }}>
         <LiveRtspPlayer
           cameraId="middle-left"
@@ -32,6 +42,7 @@ function App() {
           wsUrl="ws://localhost:8000/ws"
         />
       </div>
+      <Score xml={musicXML || ''} />
     </div>
   )
 }

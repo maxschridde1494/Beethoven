@@ -8,3 +8,6 @@ from blinker import signal
 
 # Detection events
 detection_made = signal('detection.made')
+
+# Music transcription events
+music_transcribed = signal('music.transcribed')
