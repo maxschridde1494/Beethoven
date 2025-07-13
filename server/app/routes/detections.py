@@ -1,6 +1,7 @@
 # app/routers/detections.py
 from fastapi import APIRouter, Depends
 from sqlmodel import Session
+from datetime import datetime
 
 from app.models.detection import Detection
 from app.db import get_session as open_session   # sync helper from db.py
@@ -41,9 +42,22 @@ def get_active_notes():
     try:
         from app.sheetmusic.streaming_transcriber import get_transcriber
         transcriber = get_transcriber()
+        
+        # Convert active notes to serializable format
+        active_notes = [
+            {
+                'note_name': note_event.note_name,
+                'key_number': note_event.key_number,
+                'camera_id': note_event.camera_id,
+                'start_time': note_event.start_time.isoformat(),
+                'duration': (datetime.now() - note_event.start_time).total_seconds()
+            }
+            for note_event in transcriber.active_notes.values()
+        ]
+        
         return {
-            "active_notes": transcriber.get_active_notes(),
-            "count": len(transcriber.get_active_notes())
+            "active_notes": active_notes,
+            "count": len(active_notes)
         }
     except Exception as e:
         return {"error": str(e), "active_notes": [], "count": 0}
@@ -55,10 +69,26 @@ def get_recent_transcriptions(limit: int = 50):
     try:
         from app.sheetmusic.streaming_transcriber import get_transcriber
         transcriber = get_transcriber()
-        recent = transcriber.get_recent_transcriptions(limit=limit)
+        
+        # Get the last N completed notes
+        recent_notes = transcriber.completed_notes[-limit:] if limit else transcriber.completed_notes
+        
+        # Convert to serializable format
+        recent_transcriptions = [
+            {
+                'note_name': note_event.note_name,
+                'key_number': note_event.key_number,
+                'camera_id': note_event.camera_id,
+                'start_time': note_event.start_time.isoformat(),
+                'end_time': note_event.end_time.isoformat() if note_event.end_time else None,
+                'duration': note_event.duration_seconds()
+            }
+            for note_event in recent_notes
+        ]
+        
         return {
-            "transcriptions": recent,
-            "count": len(recent),
+            "transcriptions": recent_transcriptions,
+            "count": len(recent_transcriptions),
             "limit": limit
         }
     except Exception as e:
@@ -71,7 +101,14 @@ def get_transcription_stats():
     try:
         from app.sheetmusic.streaming_transcriber import get_transcriber
         transcriber = get_transcriber()
-        return transcriber.get_stats()
+        
+        return {
+            'active_count': len(transcriber.active_notes),
+            'completed_count': len(transcriber.completed_notes),
+            'buffer_seconds': transcriber.buffer_seconds,
+            'bpm': transcriber.bpm,
+            'detections_count': len(transcriber.detections)
+        }
     except Exception as e:
         return {"error": str(e), "running": False}
 
@@ -82,7 +119,7 @@ def clear_transcription_history():
     try:
         from app.sheetmusic.streaming_transcriber import get_transcriber
         transcriber = get_transcriber()
-        transcriber.clear_history()
+        transcriber.reset()
         return {"message": "Transcription history cleared successfully"}
     except Exception as e:
         return {"error": str(e), "message": "Failed to clear history"}

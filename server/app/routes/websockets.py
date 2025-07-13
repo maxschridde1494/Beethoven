@@ -38,11 +38,43 @@ async def get_initial_data(websocket: WebSocket):
         from app.sheetmusic.streaming_transcriber import get_transcriber
         transcriber = get_transcriber()
         
+        # Convert active notes to serializable format
+        active_notes = [
+            {
+                'note_name': note_event.note_name,
+                'key_number': note_event.key_number,
+                'camera_id': note_event.camera_id,
+                'start_time': note_event.start_time.isoformat(),
+                'duration': (datetime.now() - note_event.start_time).total_seconds()
+            }
+            for note_event in transcriber.active_notes.values()
+        ]
+        
+        # Convert recent completed notes to serializable format
+        recent_transcriptions = [
+            {
+                'note_name': note_event.note_name,
+                'key_number': note_event.key_number,
+                'camera_id': note_event.camera_id,
+                'start_time': note_event.start_time.isoformat(),
+                'end_time': note_event.end_time.isoformat() if note_event.end_time else None,
+                'duration': note_event.duration_seconds()
+            }
+            for note_event in transcriber.completed_notes[-10:]  # Last 10 completed notes
+        ]
+        
+        transcriber_stats = {
+            'active_count': len(transcriber.active_notes),
+            'completed_count': len(transcriber.completed_notes),
+            'buffer_seconds': transcriber.buffer_seconds,
+            'bpm': transcriber.bpm
+        }
+        
         return {
             "relative_positions": get_relative_positions(websocket.app),
-            "active_notes": transcriber.get_active_notes(),
-            "transcriber_stats": transcriber.get_stats(),
-            "recent_transcriptions": transcriber.get_recent_transcriptions(limit=10)
+            "active_notes": active_notes,
+            "transcriber_stats": transcriber_stats,
+            "recent_transcriptions": recent_transcriptions
         }
     except Exception as e:
         logger.error(f"Error getting initial data: {e}")

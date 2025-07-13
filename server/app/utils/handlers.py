@@ -7,6 +7,7 @@ in the detection system.
 # import asyncio
 import os
 from uuid import UUID
+from datetime import datetime
 from fastapi import FastAPI
 
 from app.utils.logger import get_logger
@@ -50,14 +51,22 @@ async def handle_music_transcription(sender, frame, camera_id, **kwargs):
         # Get the global transcriber instance
         transcriber = get_transcriber()
         
-        # Process the detections through the transcriber
-        result = transcriber.process_detections(detections)
+        # Process each detection through the transcriber
+        for detection_data in detections:
+            note_name = detection_data.get('note_name')
+            key_number = detection_data.get('key_number')
+            
+            # Only process detections that have note information
+            if note_name and key_number:
+                transcriber.ingest_detection(
+                    note_name=note_name,
+                    key_number=key_number,
+                    camera_id=camera_id,
+                    timestamp=datetime.now()
+                )
         
-        # Log transcription activity
-        if result.get('new_notes') or result.get('updated_notes'):
-            logger.debug(f"Music transcription processed {result.get('processed_count', 0)} detections "
-                        f"from camera {camera_id}: {len(result.get('new_notes', []))} new notes, "
-                        f"{len(result.get('updated_notes', []))} updated notes")
+        logger.debug(f"Ingested {len([d for d in detections if d.get('note_name') and d.get('key_number')])} "
+                    f"detections into transcriber from camera {camera_id}")
         
     except Exception as e:
         logger.error(f"Error handling music transcription: {e}")
@@ -79,8 +88,3 @@ async def setup_handlers(app: FastAPI):
         logger.info("Database persistence handler connected.")
     else:
         logger.info("DATABASE_PERSIST_DETECTIONS is not set, skipping detection storage.")
-
-    # Start the transcriber
-    from app.sheetmusic.streaming_transcriber import start_transcriber
-    start_transcriber()
-    logger.info("StreamingTranscriber started.")
