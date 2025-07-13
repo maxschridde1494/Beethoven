@@ -70,9 +70,9 @@ export const useRealTime = (url: string) => {
         setRecentTranscriptions(initData.recent_transcriptions || []);
         setIsLoading(false);
       } else if (message === RealTimeMessage.DetectionMade) {
-        console.log('DetectionMade', data);
+        // console.log('DetectionMade', data);
       } else if (message === RealTimeMessage.MusicTranscribed) {
-        console.log('MusicTranscribed', data);
+        // console.log('MusicTranscribed', data);
         
         const transcriptionData: TranscriptionData = data.transcription;
         

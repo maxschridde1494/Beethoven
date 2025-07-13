@@ -7,7 +7,7 @@ export function Score({ xml }: { xml: string }) {
     osmd
       .load(xml)   // <- no WS needed
       .then(() => osmd.render());
-  }, []);
+  }, [xml]);
 
   return <div id="score" style={{ width: "100%" }} />;
 }
