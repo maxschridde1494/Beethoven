@@ -11,8 +11,11 @@ from collections import deque, defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict
+from app.utils.logger import get_logger
 
 from music21 import stream, note, meter, tempo
+
+logger = get_logger(__name__)
 
 @dataclass
 class NoteEvent:
@@ -63,6 +66,9 @@ class StreamingTranscriber:
 
         # Finalize notes no longer detected
         to_finalize = []
+        logger.info(f"Active notes: {self.active_notes}")
+        logger.info(f"Recent notes: {recent_notes}")
+        logger.info(f"Completed notes: {self.completed_notes}")
         for note_name in list(self.active_notes.keys()):
             if recent_notes[note_name] == 0:
                 # If note hasn't appeared in recent buffer, finalize it
@@ -83,6 +89,7 @@ class StreamingTranscriber:
 
     def generate_musicxml(self) -> Optional[str]:
         if not self.completed_notes:
+            logger.info("No completed notes to generate musicxml")
             return None
 
         s = stream.Score()
@@ -126,7 +133,8 @@ def get_transcriber() -> StreamingTranscriber:
 
 
 # Example of background usage in FastAPI
-async def background_transcription_loop(transcriber: StreamingTranscriber, websocket_emitter):
+async def background_transcription_loop(transcriber: StreamingTranscriber):
+    logger.info("Starting background transcription loop")
     while True:
         await asyncio.sleep(1.0)
         xml = transcriber.generate_musicxml()
@@ -152,6 +160,8 @@ async def background_transcription_loop(transcriber: StreamingTranscriber, webso
                     'active_notes_count': len(transcriber.active_notes),
                     'timestamp': datetime.utcnow().isoformat()
                 }
+
+                logger.info(f"Emitting music_transcribed signal: {transcription_data}")
                 
                 music_transcribed.send(
                     transcriber,
@@ -162,10 +172,6 @@ async def background_transcription_loop(transcriber: StreamingTranscriber, webso
                 # Log error but don't break the loop
                 print(f"Error emitting music_transcribed signal: {e}")
             
-            await websocket_emitter.broadcast({
-                "timestamp": datetime.utcnow().isoformat(),
-                "status": "active",
-                "message": "sheet_update",
-                "data": {"xml": xml},
-            })
             transcriber.reset()
+        else:
+            logger.info("No musicxml generated")

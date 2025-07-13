@@ -15,6 +15,7 @@ from app.utils.handlers import setup_handlers
 from app.utils.logger import get_logger
 from app.state import set_run_id, set_relative_positions
 from app.roboflow.utils.relative_position import infer_relative_positions
+from app.sheetmusic.streaming_transcriber import get_transcriber, background_transcription_loop
 
 load_dotenv()
 
@@ -102,6 +103,9 @@ async def lifespan(app: FastAPI):
         logger.info(f"Relative positions inference complete for cameras: {list(relative_positions.keys())}")
 
     start_streams(app, loop, camera_config)
+
+    transcriber = get_transcriber()
+    asyncio.create_task(background_transcription_loop(transcriber))
     
     yield
     
