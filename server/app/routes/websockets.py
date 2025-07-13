@@ -15,7 +15,7 @@ logger = get_logger(__name__)
 
 router = APIRouter(prefix="", tags=["RTP"])
 
-from app.utils.signals import detection_made
+from app.utils.signals import detection_made, music_transcribed
 _clients: Set[WebSocket] = set()
 
 
@@ -28,12 +28,30 @@ async def broadcast_to_clients(clients: Set[WebSocket], data: dict):
             await websocket.send_json(data)
         except Exception as e:
             logger.error(f"{type(e)} error sending data to client: {e}")
+            # Remove disconnected clients
+            clients.discard(websocket)
+
 
 async def get_initial_data(websocket: WebSocket):
-    """Get the initial data for a new websocket connection."""
-    return {
-        "relative_positions": get_relative_positions(websocket.app),
-    }
+    """Get initial data to send to a new client."""
+    try:
+        from app.sheetmusic.streaming_transcriber import get_transcriber
+        transcriber = get_transcriber()
+        
+        return {
+            "relative_positions": get_relative_positions(websocket.app),
+            "active_notes": transcriber.get_active_notes(),
+            "transcriber_stats": transcriber.get_stats(),
+            "recent_transcriptions": transcriber.get_recent_transcriptions(limit=10)
+        }
+    except Exception as e:
+        logger.error(f"Error getting initial data: {e}")
+        return {
+            "relative_positions": get_relative_positions(websocket.app),
+            "active_notes": [],
+            "transcriber_stats": {},
+            "recent_transcriptions": []
+        }
 
 @router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
@@ -84,3 +102,22 @@ async def publish_detection(sender, frame, camera_id, **kw):
             "detections": serialized_detections
         }
     })
+
+@music_transcribed.connect
+async def publish_music_transcription(sender, **kw):
+    """Publish music transcription data to WebSocket clients."""
+    transcription_data = kw.get('transcription_data', {})
+    notes_count = kw.get('notes_count', 0)
+    
+    # Broadcast transcription update to all clients
+    await broadcast_to_clients(_clients, {
+        "timestamp": datetime.now().isoformat(),
+        "status": "active",
+        "message": "music_transcribed",
+        "data": {
+            "transcription": transcription_data,
+            "notes_count": notes_count
+        }
+    })
+    
+    logger.debug(f"Published music transcription to {len(_clients)} clients: {notes_count} notes")

@@ -32,3 +32,57 @@ def create_detection(
 def list_detections():
     """List recent detections using the same logic as WebSocket for consistency."""
     return get_recent_detections()
+
+
+# ───────── transcription endpoints ──────────────────────────────────────────
+@router.get("/transcription/active-notes")
+def get_active_notes():
+    """Get currently active notes from the transcriber."""
+    try:
+        from app.sheetmusic.streaming_transcriber import get_transcriber
+        transcriber = get_transcriber()
+        return {
+            "active_notes": transcriber.get_active_notes(),
+            "count": len(transcriber.get_active_notes())
+        }
+    except Exception as e:
+        return {"error": str(e), "active_notes": [], "count": 0}
+
+
+@router.get("/transcription/recent")
+def get_recent_transcriptions(limit: int = 50):
+    """Get recent transcribed notes."""
+    try:
+        from app.sheetmusic.streaming_transcriber import get_transcriber
+        transcriber = get_transcriber()
+        recent = transcriber.get_recent_transcriptions(limit=limit)
+        return {
+            "transcriptions": recent,
+            "count": len(recent),
+            "limit": limit
+        }
+    except Exception as e:
+        return {"error": str(e), "transcriptions": [], "count": 0}
+
+
+@router.get("/transcription/stats")
+def get_transcription_stats():
+    """Get transcriber statistics."""
+    try:
+        from app.sheetmusic.streaming_transcriber import get_transcriber
+        transcriber = get_transcriber()
+        return transcriber.get_stats()
+    except Exception as e:
+        return {"error": str(e), "running": False}
+
+
+@router.post("/transcription/clear")
+def clear_transcription_history():
+    """Clear transcription history (useful for testing)."""
+    try:
+        from app.sheetmusic.streaming_transcriber import get_transcriber
+        transcriber = get_transcriber()
+        transcriber.clear_history()
+        return {"message": "Transcription history cleared successfully"}
+    except Exception as e:
+        return {"error": str(e), "message": "Failed to clear history"}

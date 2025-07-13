@@ -112,6 +112,11 @@ async def lifespan(app: FastAPI):
     StreamManager().stop_all()
     logger.info("Detector and stream managers stopped.")
 
+    # Stop the transcriber
+    from app.sheetmusic.streaming_transcriber import stop_transcriber
+    stop_transcriber()
+    logger.info("StreamingTranscriber stopped.")
+
     # Terminate all FFmpeg subprocesses
     if ffmpeg_processes:
         logger.info(f"Terminating {len(ffmpeg_processes)} FFmpeg subprocess(es)...")
